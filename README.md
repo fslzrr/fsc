@@ -1,14 +1,10 @@
 # Function Script Proposal
 
----
-
 The purpose of this compiler is to give web developers a tool to learn functional programming concepts with a familiar environment.
 
 In the future we'll be working on adding _JavaScript_ and _WebAssembly_ as a compilation target.
 
 ## Features
-
----
 
 1. Types
 2. Variables
@@ -19,13 +15,9 @@ In the future we'll be working on adding _JavaScript_ and _WebAssembly_ as a com
 
 ## Syntaxis
 
----
-
 As said before it will have a _JavaScript_-like syntax but with some basic functional features like types.
 
 ### Types
-
----
 
 **Base Types**
 
