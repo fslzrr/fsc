@@ -1,0 +1,110 @@
+(* Types *)
+
+type ::= 'type' type_id '=' (primitives_type | complex_type);
+
+primitives_type ::= 'Boolean' | 'Int' | 'Float' | 'Char' | 'String';
+
+type ::= primitives_type | type_id;
+
+complex_type ::= ListType | TupleType | FunctionType | ObjectType;
+
+ListType ::= '[' type ']';
+
+TupleType ::= '(' type (',' type)* ')';
+
+FunctionType ::= (type '->')+ type;
+
+ObjectType ::= '{' (val_id ':' type) (',' val_id ':' type)* '}';
+
+type_id ::= [A-Z]+[a-zA-Z0-9]*;
+
+val_id ::= [a-zA-Z]+[a-zA-Z0-9]*;
+
+(* Type Literals *)
+
+Boolean ::= 'True' | 'False';
+
+Int ::= sign?[0-9]+;
+
+Float ::= sign?[0-9]+.[0-9]+;
+
+sign ::= '+' | '-';
+
+Char ::= "'"[http://www.w3.org/TR/xml#NT-Char]"'";
+
+String ::= '"' [http://www.w3.org/TR/xml#NT-Char]* '"';
+
+primitive_literal ::= Boolean | Int | Float | Char | String;
+
+complex_literal ::= List | Tuple | FunctionLiteral | Object;
+
+numeric_literal ::= Float | Int;
+
+literal ::= primitive_literal | complex_literal;
+
+List ::= '[' expression (',' expression)* ']';
+
+Tuple ::= '(' expression (',' expression)* ')';
+
+FunctionLiteral ::= '('(val_id ':' type) (',' (val_id ':' type))* ')' '->' block;
+
+Object ::= '{' (val_id ':' expression) (',' val_id ':' expression)* '}';
+
+(* Access *)
+
+collection_access ::= (val_id | List | Tuple)'['[0-9]+']';
+
+(* Operators *)
+
+(* Unary *)
+
+unary_operator ::= '!';
+
+(* Binary *)
+
+binary_operator ::= '==' | '!=';
+
+boolean_operator ::= '&&' | '||';
+
+numerical_boolean_operator ::= '<' | '>' | '<=' | '>=';
+
+arithmetic_operator ::= '+' | '-' | '*' | '/' | '%';
+
+(* Expressions *)
+
+boolean_expression ::= 
+    Boolean | 
+    val_id |
+    '(' boolean_expression ')' |
+    unary_operator boolean_expression |
+    (boolean_expression  (binary_operator | boolean_operator) boolean_expression) | 
+    (arithmetic_expression  (binary_operator | numerical_boolean_operator) arithmetic_expression) |
+    (char_expression binary_operator char_expression)
+    ;
+
+arithmetic_expression ::= 
+    numeric_literal | 
+    val_id |
+    '(' arithmetic_expression ')' | 
+    (arithmetic_expression arithmetic_operator arithmetic_expression);
+
+char_expression ::= Char | String | val_id;
+
+expression ::= 
+    literal | 
+    val_id | 
+    boolean_expression | 
+    arithmetic_expression | 
+    function_call | 
+    conditional_expression | 
+    collection_access;
+
+(* if else *)
+conditional_expression ::= 'if' conditional_expression_body;
+conditional_expression_body ::= boolean_expression '?' block ':' (conditional_expression_body | block);
+
+variable_declaration ::= 'val' val_id ':' type '=' expression;
+function ::= 'fun' val_id '('(val_id ':' type) (',' (val_id ':' type))* ')' block;
+function_call ::= val_id '(' expression (',' expression)* ')'; 
+
+block ::= '{' variable_declaration* expression '}';
