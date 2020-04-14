@@ -83,6 +83,7 @@ To express variables with multiple attributes.
 **Function**
 
 `[argument-type] -> [return-type]`
+
 `[argument-type] -> [argument-type] -> [return-type]`
 
 ### Literals
