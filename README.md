@@ -2,8 +2,8 @@
 
 ## Developers
 
--   Fernando Salazar Valenzuela
--   Jorge Iván Iribe Ávila
+- Fernando Salazar Valenzuela
+- Jorge Iván Iribe Ávila
 
 ## Vision / Purpose
 
@@ -13,9 +13,9 @@ The purpose of this compiler is to give web developers a tool to learn functiona
 
 Help web engineers learn Functional Programming concepts like
 
--   Higher Order Functions
--   Immutability
--   Recursion
+- Higher Order Functions
+- Immutability
+- Recursion
 
 The idea of language is for developers learn functional programming with an environment that is not as scary as languages like Haskell or Erlang. Function Script borrows a part of its syntax (specially functions) from Haskell, as we think it has a very elegant syntax that clearly shows the power of functional programming. In order to make sure developers are actually learning the concepts we desire, we decided to not include very imperative features like for loops and mutable variables, instead the developers must use recursion to substitute loops.
 
@@ -83,6 +83,7 @@ To express variables with multiple attributes.
 **Function**
 
 `[argument-type] -> [return-type]`
+`[argument-type] -> [argument-type] -> [return-type]`
 
 ### Literals
 
@@ -154,26 +155,26 @@ val sum : Int -> Int = number ->  {
 
 #### Logical Operators
 
--   `!`
--   `&&`
--   `||`
+- `!`
+- `&&`
+- `||`
 
 #### Relational Operators
 
--   `==`
--   `!=`
--   `<`
--   `<=`
--   `>`
--   `>=`
+- `==`
+- `!=`
+- `<`
+- `<=`
+- `>`
+- `>=`
 
 #### Arithmetic Operators
 
--   `+`
--   `-`
--   `*`
--   `/`
--   `%`
+- `+`
+- `-`
+- `*`
+- `/`
+- `%`
 
 ### Variables
 
@@ -229,38 +230,38 @@ The last line of the body is the return value of the function where it is used.
 
 ### Reserved Words
 
--   val
--   type
--   Boolean
--   Int
--   Float
--   Char
--   String
--   True
--   False
--   if
+- val
+- type
+- Boolean
+- Int
+- Float
+- Char
+- String
+- True
+- False
+- if
 
 ### Symbols
 
--   =
--   ,
--   :
--   ?
--   (
--   )
--   {
--   }
--   [
--   ]
--   ->
+- =
+- ,
+- :
+- ?
+- (
+- )
+- {
+- }
+- [
+- ]
+- ->
 
 ### Valid Type names
 
--   [A-Z][a-za-z0-9]\*
+- [A-Z][a-za-z0-9]\*
 
 ### Valid Variable and Function names
 
--   [a-z][a-za-z0-9]
+- [a-z][a-za-z0-9]
 
 ## Syntax
 
@@ -294,3 +295,7 @@ print (mergeLists listOne listTwo)
 
 // Prints [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
+
+## Sytax Diagram
+
+Diagrams are in a separate PDF file. [Download](./syntax/syntaxDiagram/diagram.pdf)
