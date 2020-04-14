@@ -298,4 +298,5 @@ print (mergeLists listOne listTwo)
 
 ## Sytax Diagram
 
-Diagrams are in a separate PDF file. [Download](./syntax/syntaxDiagram/diagram.pdf)
+Diagrams are in a separate PDF file.
+Watching this README file from our repository you'll be to navigate the file and downloadit from there. [Navitage To File](./syntax/syntaxDiagram/diagram.pdf)
