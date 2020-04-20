@@ -1,0 +1,17 @@
+{
+  "name": "fsc-compiler",
+  "version": "1.0.0",
+  "description": "Compiler for the Function Script Compiler",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "compile": "npm run antlr4-js",
+    "antlr4-js": "java -Xmx500M -cp '/usr/local/lib/antlr-4.8-complete.jar:$CLASSPATH' org.antlr.v4.Tool  -Dlanguage=JavaScript -lib grammars -o lib -visitor -Xexact-output-dir grammars/fs.g4"
+  },
+  "author": "jorgeiiavila",
+  "license": "ISC",
+  "dependencies": {
+    "antlr4": "^4.8.0"
+  }
+}

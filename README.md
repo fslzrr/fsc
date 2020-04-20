@@ -281,11 +281,11 @@ mergeLists listOne listTwo = {
     } : (length listTwo) == 0 ? {
         listOne
     } : listOneHead < listTwoHead ? {
-        val restOfListOne : [Int] = tail listOne
-        concat [listOneHead] (mergeLists restOfListOne listTwo)
+        val restOfListOne : [Int] = (tail listOne)
+        (concat [listOneHead] (mergeLists restOfListOne listTwo))
     } : {
-        val restOfListTwo : [Int] = tail listTwo
-        concat [listTwoHead] (mergeLists restOfListOne listTwo)
+        val restOfListTwo : [Int] = (tail listTwo)
+        (concat [listTwoHead] (mergeLists restOfListOne listTwo))
     }
 }
 
@@ -297,7 +297,7 @@ print (mergeLists listOne listTwo)
 // Prints [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
 
-## Sytax Diagram
+## Syntax Diagram
 
 Diagrams are in a separate PDF file.
 Watching this README file from our repository you'll be to navigate the file and downloadit from there. [Navitage To File](./syntax/syntaxDiagram/diagram.pdf)

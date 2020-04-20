@@ -1,6 +1,6 @@
 (* Types *)
 
-type ::= 'type' type_id '=' (primitives_type | complex_type);
+type ::= 'type' type_id '=' complex_type;
 
 primitives_type ::= 'Boolean' | 'Int' | 'Float' | 'Char' | 'String';
 
@@ -114,3 +114,12 @@ block ::= '{' (variable_declaration | io)* expression '}';
 io ::= '(' 'print' expression expression* ')';
 
 main ::=(variable_declaration | (function_header function_body) | expression | io)*;
+
+
+
+first ::= '+' | '-';
+second ::= '*' | '/' | '%';
+
+exp ::= fact (first fact)*;
+fact ::= operand (second operand)* ;
+operand ::= numeric_literal | val_id;
