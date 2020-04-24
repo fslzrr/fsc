@@ -273,17 +273,17 @@ The syntax of the language can be found in the syntax.ebnf file. It is expressed
 ```
 mergeLists : [Int] -> [Int] -> [Int]
 mergeLists listOne listTwo = {
-    val listOneHead : Int = head listOne
-    val listTwoHead : Int = head listTwo
+    val listOneHead : Int = (head listOne)
+    val listTwoHead : Int = (head listTwo)
 
-    if (length listOne) == 0 ? {
+    if (length listOne) == 0 then {
         listTwo
-    } : (length listTwo) == 0 ? {
+    } else if (length listTwo) == 0 then {
         listOne
-    } : listOneHead < listTwoHead ? {
+    } else if listOneHead < listTwoHead then {
         val restOfListOne : [Int] = (tail listOne)
         (concat [listOneHead] (mergeLists restOfListOne listTwo))
-    } : {
+    } else {
         val restOfListTwo : [Int] = (tail listTwo)
         (concat [listTwoHead] (mergeLists restOfListOne listTwo))
     }
@@ -292,7 +292,7 @@ mergeLists listOne listTwo = {
 val listOne : [Int] = [1, 3, 5, 7, 9]
 val listTwo : [Int] = [2, 4, 6, 8, 10]
 
-print (mergeLists listOne listTwo)
+(print (mergeLists listOne listTwo))
 
 // Prints [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
