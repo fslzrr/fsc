@@ -2,16 +2,13 @@ const antlr4 = require("antlr4");
 const fsLexer = require("./lib/fsLexer.js");
 const fsParser = require("./lib/fsParser.js");
 const Listener = require("./src/Listener");
+const Visitor = require("./src/Visitor");
 const ErrorListener = require("./src/ErrorListener");
 
 const input = `
-    val listOne : [Int] = [-1, 0, 1, 2, 3, 4]
-    val listTwo : [Int] = [-1, 0, 1, 2, 3, 4]
-    mergeLists [Int] -> [Int] -> [Int]
-    mergeLists listOne listTwo = {}
-`;
+    val listOne : [Int] = [1, 3, 5, 7, 9]
+    val listTwo : [Int] = [2, 4, 6, 8, 10]
 
-const expression = `
     mergeLists : [Int] -> [Int] -> [Int]
     mergeLists listOne listTwo = {
         val listOneHead : Int = 10
@@ -23,20 +20,15 @@ const expression = `
             listOne
         } else if listOneHead < listTwoHead then {
             val restOfListOne : [Int] = (tail listOne)
-            (concat [listOneHead] (mergeLists restOfListOne listTwo))
+            concat [listOneHead] (mergeLists restOfListOne listTwo)
         } else {
             val restOfListTwo : [Int] = (tail listTwo)
-            (concat [listTwoHead] (mergeLists restOfListOne listTwo))
+            concat [listTwoHead] (mergeLists restOfListOne listTwo)
         }
     }
-
-    val listOne : [Int] = [1, 3, 5, 7, 9]
-    val listTwo : [Int] = [2, 4, 6, 8, 10]
-
-    (print (mergeLists listOne listTwo))
 `;
 
-const chars = new antlr4.InputStream(expression);
+const chars = new antlr4.InputStream(input);
 const lexer = new fsLexer.fsLexer(chars);
 
 lexer.strictMode = false; // do not use js strictMode
@@ -47,8 +39,6 @@ parser.removeParseListeners();
 parser.addParseListener(new Listener());
 
 const tree = parser.main();
-console.log(tree.toStringTree(parser.ruleNames));
-
 // Print recognized tokens
 
 // try {

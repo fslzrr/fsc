@@ -2,7 +2,7 @@ grammar fs;
 
 // GRAMMAR
 
-main : val_declaration* func*;
+main : val_declaration* func* EOF;
 
 // Types
 
@@ -41,8 +41,12 @@ val_declaration : VAL VAL_ID COLON type_name ASSIGN_OP expression;
 func_declaration : VAL_ID COLON type_name (ARROW type_name)+;
 func_body : VAL_ID VAL_ID+ ASSIGN_OP block;
 func : func_declaration func_body;
-arg : VAL_ID | func_call | literal | OPEN_PAREN expression CLOSE_PAREN;
-func_call : OPEN_PAREN VAL_ID arg+ CLOSE_PAREN;
+arg : 
+VAL_ID | 
+OPEN_PAREN func_call CLOSE_PAREN | 
+literal | 
+OPEN_PAREN expression CLOSE_PAREN;
+func_call : VAL_ID arg+;
 
 binary_operators : AND | OR | EQ | NOT_EQ | LOWER_THAN | GREATER_THAN | LOWER_THAN_OR_EQ | LOWER_THAN_OR_EQ;
 
@@ -56,7 +60,7 @@ if_body : block | if_expression;
 
 all_expressions : expression | if_expression;
 
-block : OPEN_BRACKET val_declaration* all_expressions* CLOSE_BRACKET;
+block : OPEN_BRACKET val_declaration* all_expressions+ CLOSE_BRACKET;
 
 // Reserved words
 TYPE : 'type';
