@@ -2,15 +2,16 @@ grammar fs;
 
 // GRAMMAR
 
-main : val_declaration* func* EOF;
+main : type_declaration* val_declaration* func* EOF;
 
 // Types
 
-type_name : BOOLEAN | INT | FLOAT | CHAR | STRING | tuple_type | list_type | func_type | TYPE_ID;
+type_name : BOOLEAN | INT | FLOAT | CHAR | STRING | list_type | func_type | TYPE_ID;
 
-object_type : OPEN_BRACKET VAL_ID COLON type_name (COMMA VAL_ID COLON type_name)* CLOSE_BRACKET;
+object_property : VAL_ID COLON type_name;
+object_type : OPEN_BRACKET object_property (COMMA object_property)* CLOSE_BRACKET;
 
-tuple_type : OPEN_PAREN type_name (COMMA type_name)* CLOSE_PAREN;
+// tuple_type : OPEN_PAREN type_name (COMMA type_name)* CLOSE_PAREN;
 
 list_type : OPEN_SQUARE_BRACKET type_name CLOSE_SQUARE_BRACKET;
 
@@ -22,7 +23,7 @@ literal : BOOL_LITERAL |
         CHAR_LITERAL | 
         STR_LITERAL |
         object_literal |
-        tuple_literal |
+        // tuple_literal |
         list_literal |
         func_literal;
 
@@ -30,7 +31,7 @@ literal : BOOL_LITERAL |
 object_attribute : VAL_ID COLON (literal | VAL_ID);
 object_literal : OPEN_BRACKET object_attribute (COMMA object_attribute)* CLOSE_BRACKET;
 collection_elem : literal | VAL_ID;
-tuple_literal : OPEN_PAREN collection_elem (COMMA collection_elem)* CLOSE_PAREN;
+// tuple_literal : OPEN_PAREN collection_elem (COMMA collection_elem)* CLOSE_PAREN;
 list_literal : OPEN_SQUARE_BRACKET collection_elem (COMMA collection_elem)* CLOSE_SQUARE_BRACKET;
 func_literal : 
         OPEN_PAREN (VAL_ID COLON type_name) (COMMA VAL_ID COLON type_name)* CLOSE_PAREN COLON type_name ARROW block;
@@ -38,15 +39,9 @@ func_literal :
 // Declarations
 type_declaration : TYPE TYPE_ID ASSIGN_OP object_type;
 val_declaration : VAL VAL_ID COLON type_name ASSIGN_OP expression;
-func_declaration : VAL_ID COLON type_name (ARROW type_name)+;
-func_body : VAL_ID VAL_ID+ ASSIGN_OP block;
-func : func_declaration func_body;
-arg : 
-VAL_ID | 
-OPEN_PAREN func_call CLOSE_PAREN | 
-literal | 
-OPEN_PAREN expression CLOSE_PAREN;
-func_call : VAL_ID arg+;
+arg : VAL_ID COLON type_name;
+func : VAL_ID OPEN_PAREN arg (COMMA arg)* CLOSE_PAREN COLON type_name ARROW block;
+func_call : VAL_ID OPEN_PAREN expression (COMMA expression)* CLOSE_PAREN;
 
 binary_operators : AND | OR | EQ | NOT_EQ | LOWER_THAN | GREATER_THAN | LOWER_THAN_OR_EQ | LOWER_THAN_OR_EQ;
 
@@ -55,12 +50,13 @@ term : factor ((MULTIPLICATION | DIVISION | MODULE) factor)*;
 exp : term ((SUM | SUBSTRACT) term)*;
 expression : exp | exp binary_operators exp;
 
-if_expression : IF expression THEN block ELSE if_body;
-if_body : block | if_expression;
+if_expression : IF expression THEN block (else_if_expression | else_expression);
+else_if_expression : ELSE if_expression;
+else_expression : ELSE block;
 
 all_expressions : expression | if_expression;
 
-block : OPEN_BRACKET val_declaration* all_expressions+ CLOSE_BRACKET;
+block : OPEN_BRACKET val_declaration* all_expressions CLOSE_BRACKET;
 
 // Reserved words
 TYPE : 'type';
@@ -87,7 +83,7 @@ BOOL_LITERAL : (TRUE | FALSE);
 INT_LITERAL : ('-')?NUMS+;
 FLOAT_LITERAL : ('-')?NUMS+'.'NUMS+;
 CHAR_LITERAL : '\''(LOWERCASE | UPPERCASE)'\'';
-STR_LITERAL : '"'(NUMS* | LOWERCASE* | UPPERCASE*)'"';
+STR_LITERAL : '"'(NUMS | LOWERCASE | UPPERCASE)*'"';
 
 // Variable Names
 VAL_ID : LOWERCASE+(LOWERCASE | UPPERCASE)*;
