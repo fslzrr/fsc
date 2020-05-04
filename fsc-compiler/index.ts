@@ -1,7 +1,7 @@
 import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
 import { fsLexer } from "./lib/fsLexer";
 import { fsParser, ExpressionContext } from "./lib/fsParser";
-import Listener from "./src/Listener";
+import SymbolTableListener from "./src/SymbolTableListener";
 import { fsListener } from "./lib/fsListener";
 
 const input = `
@@ -20,16 +20,20 @@ const input = `
     val listOne : [Int] = [1, 3, 5, 7, 9]
     val listTwo : [Int] = [2, 4, 6, 8, 10]
 
-    mergeLists(listOne : [Int], listTwo : [Int]) : [Int] -> {
+    val func : (Int -> Int -> Int) = (a: Int, b: Int) : Int -> {
+        a + b
+    }
+
+    mergeLists(listOne : (Int -> Int -> Int), listTwo : [Int]) : [Int] -> {
         val listOneHead : Int = 10
-        val listTwoHead : Int = 10
+        val listTwoHead : Int = 20
         val person : Person = {
             name: "Jorge",
             lastName: "Iribe",
             age: 21
         }
 
-        if length(listOne) == 0 then {
+        if 0 == 0 then {
             val a : Int = 10
             val b : Int = 20
             if 3 == 0 then {
@@ -51,10 +55,10 @@ const lexer = new fsLexer(chars);
 const tokens = new CommonTokenStream(lexer);
 const parser = new fsParser(tokens);
 
-const listener: fsListener = new Listener();
+const symbolTableListener: fsListener = new SymbolTableListener();
 
 parser.removeParseListeners();
-parser.addParseListener(listener);
+parser.addParseListener(symbolTableListener);
 
 try {
   parser.main();

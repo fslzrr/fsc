@@ -142,6 +142,4 @@ const SemanticCube = {
   },
 };
 
-console.log(SemanticCube["Int"]["Float"]["/"]);
-
 export default SemanticCube;

@@ -35,6 +35,12 @@ export type Variable = {
   type: string;
 };
 
+export type Function = {
+  name: string;
+  args: Variable[];
+  type: string;
+};
+
 export class SymbolTable {
   scopeName: string;
   scopeLevel: number;
@@ -42,7 +48,7 @@ export class SymbolTable {
   enclosedScope?: SymbolTable;
   varsMap: Map<string, Variable>;
   argsMap: Map<string, Variable>;
-  dirMap: Map<string, SymbolTable>;
+  funcMap: Map<string, Function>;
 
   reservedKeywords: Set<string>;
   builtInTypes: Set<string>;
@@ -58,7 +64,7 @@ export class SymbolTable {
     this.enclosedScope = enclosedScope;
     this.varsMap = new Map();
     this.argsMap = new Map();
-    this.dirMap = new Map();
+    this.funcMap = new Map();
 
     this.reservedKeywords = reservedKeywords;
     this.builtInTypes = builtInTypes;
