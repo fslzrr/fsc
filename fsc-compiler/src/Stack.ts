@@ -26,4 +26,13 @@ export class Stack<T> {
   bottom(): T {
     return this.buffer[0];
   }
+
+  empty(): boolean {
+    return this.length === 0;
+  }
+
+  reset() {
+    this.buffer = [];
+    this.length = 0;
+  }
 }

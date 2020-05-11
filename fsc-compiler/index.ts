@@ -64,6 +64,8 @@ const testOne = `
   val l : Int = 10
 
   val x : Int = ((a * b - c * d) > c + d * e / f) && (g * h - j > l - a) && b + c > d * f
+  val y : Int = a + 10 / 23
+  val z : Int = b * (2 + 4) - 10
   
   `;
 

@@ -177,12 +177,12 @@ class SymbolTableListener implements fsListener {
       else typesStack.push(getLiteralType(isLiteral));
     }
 
-    if (termOperators.some((x) => x === oprStack.top())) {
-      this.addQuadruple();
-    }
-
     if (ctx.text[ctx.text.length - 1] === ")") {
       oprStack.pop();
+    }
+
+    if (termOperators.some((x) => x === oprStack.top())) {
+      this.addQuadruple();
     }
   }
 
@@ -254,7 +254,15 @@ class SymbolTableListener implements fsListener {
 
   enterExpression(ctx: ExpressionContext) {}
 
-  exitExpression(ctx: ExpressionContext) {}
+  exitExpression(ctx: ExpressionContext) {
+    if (operandsStack.empty() || oprStack.empty()) {
+      console.log("QUADRUPLES", quadruples);
+      operandsStack.reset();
+      oprStack.reset();
+      typesStack.reset();
+      quadruples.reset();
+    }
+  }
 
   // Check if type used exists
   exitType_name(ctx: Type_nameContext) {
@@ -291,8 +299,10 @@ class SymbolTableListener implements fsListener {
   }
 
   exitMain(ctx: MainContext) {
-    console.log(quadruples);
-    console.log(typesStack);
+    console.log("QUADRUPLES", quadruples);
+    console.log("OPERANDS", operandsStack);
+    console.log("OPERATORS", oprStack);
+    console.log("TYPES", typesStack);
   }
 }
 

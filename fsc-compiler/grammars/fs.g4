@@ -2,7 +2,7 @@ grammar fs;
 
 // GRAMMAR
 
-main : type_declaration* (val_declaration | func | expression)* EOF;
+main : type_declaration* val_declaration* func* func_call* EOF;
 
 // Types
 
