@@ -50,11 +50,11 @@ const input = `
     }
 `;
 
-const expression = `
+const testOne = `
   val a : Int = 10
   val b : Int = 10
   val c : Int = 10
-  val d : Int = 10
+  val d : Float = 10
   val e : Int = 10
   val f : Int = 10
   val k : Int = 10
@@ -67,7 +67,7 @@ const expression = `
   
   `;
 
-const chars = new ANTLRInputStream(expression);
+const chars = new ANTLRInputStream(testOne);
 const lexer = new fsLexer(chars);
 const tokens = new CommonTokenStream(lexer);
 const parser = new fsParser(tokens);

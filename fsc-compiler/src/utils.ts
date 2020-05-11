@@ -4,6 +4,11 @@ import {
   FuncContext,
   LiteralContext,
 } from "../lib/fsParser";
+import {
+  SemanticCubeTypes,
+  SemanticCubeOperators,
+  SemanticCube,
+} from "./SemanticCube";
 
 export function isNameValid(mainScope: SymbolTable, name: string) {
   if (mainScope.builtInTypes.has(name) || mainScope.userTypes.has(name)) {
@@ -69,4 +74,28 @@ export function getLiteralType(ctx: LiteralContext) {
   if (ctx.list_literal()) return ctx.list_literal().text;
   if (ctx.object_literal().text) return ctx.object_literal().text;
   return "NULL";
+}
+
+export function getValIDType(scope: SymbolTable, valID: string) {
+  const getVarType = (scope: SymbolTable, valID: string): string => {
+    const valIDRef = scope.varsMap.get(valID);
+    if (valIDRef) return valIDRef.type;
+    return getValIDType(scope.enclosedScope, valID);
+  };
+
+  return getVarType(scope, valID);
+}
+
+export function getExpressionType(
+  operandOneType: SemanticCubeTypes,
+  operandTwoType: SemanticCubeTypes,
+  operator: SemanticCubeOperators
+) {
+  const typeOne = SemanticCube[operandOneType];
+  if (!typeOne) return "Error";
+  const typeTwo = typeOne[operandTwoType];
+  if (!typeTwo) return "Error";
+  const type = typeTwo[operator];
+  if (!type) return "Error";
+  return type;
 }

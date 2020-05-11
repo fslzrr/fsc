@@ -23,17 +23,23 @@ import {
   isTypeDeclared,
   extractObjectProperties,
   extractFuncArgs,
+  getLiteralType,
+  getValIDType,
+  getExpressionType,
 } from "./utils";
+import { SemanticCubeTypes, SemanticCubeOperators } from "./SemanticCube";
+import { Stack } from "./Stack";
 
-const currentScope: SymbolTable[] = [];
-
+const termOperators = ["*", "/", "%"];
+const expOperators = ["+", "-"];
 const binaryOperators = ["==", "!=", "<", ">", "<=", ">="];
 const relationalOperators = ["&&", "||"];
 
-const quadruples: [string, string, string, string][] = [];
-const oprStack: string[] = [];
-const operandsStack: string[] = [];
-const typesStack: string[] = [];
+const currentScope = new Stack<SymbolTable>();
+const quadruples = new Stack<[string, string, string, string]>();
+const oprStack = new Stack<string>();
+const operandsStack = new Stack<string>();
+const typesStack = new Stack<string>();
 let tempCounter = 1;
 
 class SymbolTableListener implements fsListener {
@@ -43,11 +49,11 @@ class SymbolTableListener implements fsListener {
   }
 
   exitVal_declaration(ctx: Val_declarationContext) {
-    const scope = currentScope[currentScope.length - 1];
+    const scope = currentScope.top();
     const name = ctx.VAL_ID().text;
     const type = ctx.type_name().text;
 
-    isNameValid(currentScope[0], name);
+    isNameValid(currentScope.bottom(), name);
 
     if (scope.varsMap.has(name)) {
       throw new Error(
@@ -62,14 +68,14 @@ class SymbolTableListener implements fsListener {
     const scope = new SymbolTable(
       ctx.start.text,
       currentScope.length,
-      currentScope[currentScope.length - 1]
+      currentScope.top()
     );
 
     currentScope.push(scope);
   }
 
   exitArg(ctx: ArgContext) {
-    const scope = currentScope[currentScope.length - 1];
+    const scope = currentScope.top();
     const name = ctx.VAL_ID().text;
     const type = ctx.type_name().text;
     scope.varsMap.set(name, { name, type });
@@ -77,7 +83,7 @@ class SymbolTableListener implements fsListener {
 
   exitFunc(ctx: FuncContext) {
     // Insert Function to funcMap of the parentScope
-    const parentScope = currentScope[currentScope.length - 1].enclosedScope;
+    const parentScope = currentScope.top().enclosedScope;
 
     const name = ctx.VAL_ID().text;
     const args = extractFuncArgs(ctx);
@@ -89,12 +95,12 @@ class SymbolTableListener implements fsListener {
   }
 
   exitType_declaration(ctx: Type_declarationContext) {
-    const mainScope = currentScope[0];
+    const mainScope = currentScope.bottom();
 
     const name = ctx.TYPE_ID().text;
     const properties = extractObjectProperties(ctx);
 
-    isNameValid(currentScope[0], name);
+    isNameValid(currentScope.bottom(), name);
 
     mainScope.userTypes.set(name, { name, properties: new Set(properties) });
   }
@@ -103,7 +109,7 @@ class SymbolTableListener implements fsListener {
     const scope = new SymbolTable(
       ctx.start.text,
       currentScope.length,
-      currentScope[currentScope.length - 1]
+      currentScope.top()
     );
 
     currentScope.push(scope);
@@ -118,7 +124,7 @@ class SymbolTableListener implements fsListener {
     const scope = new SymbolTable(
       ctx.start.text,
       currentScope.length,
-      currentScope[currentScope.length - 1]
+      currentScope.top()
     );
 
     currentScope.push(scope);
@@ -128,6 +134,10 @@ class SymbolTableListener implements fsListener {
     currentScope.pop();
   }
 
+  /*
+  Check if the parser read a Term Operator. If yes, add it
+  to the oprStack
+   */
   enterFactor(ctx: FactorContext) {
     const termState = ctx.parent.text;
 
@@ -140,32 +150,35 @@ class SymbolTableListener implements fsListener {
     }
   }
 
+  /*
+  When you exit a Factor, check if there is
+  a pending Term expression to perform. If yes, add a new quadruple.
+  */
   exitFactor(ctx: FactorContext) {
-    const scope = currentScope[currentScope.length - 1];
+    const scope = currentScope.top();
     if (ctx.VAL_ID() && !isVarDeclared(scope, ctx.text)) {
       throw new Error(`Undeclared variable "${ctx.VAL_ID().text}"`);
     }
 
-    if (ctx.func_call() && !isFuncDeclared(scope, ctx.text)) {
+    if (
+      ctx.func_call() &&
+      !isFuncDeclared(scope, ctx.func_call().VAL_ID().text)
+    ) {
       const funcName = ctx.func_call().VAL_ID();
       throw new Error(`Undeclared function "${funcName}"`);
     }
 
-    if (ctx.VAL_ID() || ctx.literal()) {
+    const isValID = ctx.VAL_ID();
+    const isLiteral = ctx.literal();
+
+    if (isValID || isLiteral) {
       operandsStack.push(ctx.text);
+      if (isValID) typesStack.push(getValIDType(scope, ctx.text));
+      else typesStack.push(getLiteralType(isLiteral));
     }
 
-    if (
-      oprStack[oprStack.length - 1] === "*" ||
-      oprStack[oprStack.length - 1] === "/" ||
-      oprStack[oprStack.length - 1] === "%"
-    ) {
-      const operator = oprStack.pop();
-      const operandTwo = operandsStack.pop();
-      const operandOne = operandsStack.pop();
-      const tempName = "T" + tempCounter++;
-      quadruples.push([operator, operandOne, operandTwo, tempName]);
-      operandsStack.push(tempName);
+    if (termOperators.some((x) => x === oprStack.top())) {
+      this.addQuadruple();
     }
 
     if (ctx.text[ctx.text.length - 1] === ")") {
@@ -173,6 +186,10 @@ class SymbolTableListener implements fsListener {
     }
   }
 
+  /*
+  Check if the parser read a Exp Operator. If yes, add it
+  to the oprStack
+   */
   enterTerm(ctx: TermContext) {
     const expState = ctx.parent.text;
 
@@ -181,20 +198,20 @@ class SymbolTableListener implements fsListener {
     }
   }
 
+  /*
+  When you exit a Term, check if there is
+  a pending Exp expression to perform. If yes, add a new quadruple.
+  */
   exitTerm(ctx: TermContext) {
-    if (
-      oprStack[oprStack.length - 1] === "+" ||
-      oprStack[oprStack.length - 1] === "-"
-    ) {
-      const operator = oprStack.pop();
-      const operandTwo = operandsStack.pop();
-      const operandOne = operandsStack.pop();
-      const tempName = "T" + tempCounter++;
-      quadruples.push([operator, operandOne, operandTwo, tempName]);
-      operandsStack.push(tempName);
+    if (expOperators.some((x) => x === oprStack.top())) {
+      this.addQuadruple();
     }
   }
 
+  /*
+  Check if the parser read a Binary Operator. If yes, add it
+  to the oprStack
+   */
   enterExp(ctx: ExpContext) {
     const operators = (ctx.parent as Binary_expressionContext).binary_operators();
 
@@ -203,17 +220,20 @@ class SymbolTableListener implements fsListener {
     }
   }
 
+  /*
+  When you exit an Exp, check if there is
+  a pending Binary expression to perform. If yes, add a new quadruple.
+  */
   exitExp(ctx: ExpContext) {
-    if (binaryOperators.some((x) => x === oprStack[oprStack.length - 1])) {
-      const operator = oprStack.pop();
-      const operandTwo = operandsStack.pop();
-      const operandOne = operandsStack.pop();
-      const tempName = "T" + tempCounter++;
-      quadruples.push([operator, operandOne, operandTwo, tempName]);
-      operandsStack.push(tempName);
+    if (binaryOperators.some((x) => x === oprStack.top())) {
+      this.addQuadruple();
     }
   }
 
+  /*
+  Check if the parser read a Relational Operator. If yes, add it
+  to the oprStack
+   */
   enterBinary_expression(ctx: Binary_expressionContext) {
     const operators = (ctx.parent as ExpressionContext).relational_operators();
 
@@ -222,14 +242,13 @@ class SymbolTableListener implements fsListener {
     }
   }
 
+  /*
+  When you exit a Binary Expression, check if there is 
+  a pending Relational expression to perform. If yes, add a new quadruple.
+  */
   exitBinary_expression(ctx: Binary_expressionContext) {
-    if (relationalOperators.some((x) => x === oprStack[oprStack.length - 1])) {
-      const operator = oprStack.pop();
-      const operandTwo = operandsStack.pop();
-      const operandOne = operandsStack.pop();
-      const tempName = "T" + tempCounter++;
-      quadruples.push([operator, operandOne, operandTwo, tempName]);
-      operandsStack.push(tempName);
+    if (relationalOperators.some((x) => x === oprStack.top())) {
+      this.addQuadruple();
     }
   }
 
@@ -237,19 +256,43 @@ class SymbolTableListener implements fsListener {
 
   exitExpression(ctx: ExpressionContext) {}
 
+  // Check if type used exists
   exitType_name(ctx: Type_nameContext) {
     const name = ctx.text;
     if (
       !ctx.list_type() &&
       !ctx.func_type() &&
-      !isTypeDeclared(currentScope[0], name)
+      !isTypeDeclared(currentScope.bottom(), name)
     ) {
       throw new Error(`Type "${name}" is not declared`);
     }
   }
 
+  // Adds a quadruple to the quadruple array, making sure that the operation is valid
+  addQuadruple() {
+    const operator = oprStack.pop() as SemanticCubeOperators;
+    const operandTwo = operandsStack.pop();
+    const operandTwoType = typesStack.pop() as SemanticCubeTypes;
+    const operandOne = operandsStack.pop();
+    const operandOneType = typesStack.pop() as SemanticCubeTypes;
+
+    const oprResult = getExpressionType(
+      operandOneType,
+      operandTwoType,
+      operator
+    );
+
+    if (oprResult === "Error") throw new Error("Type Error in Expression");
+
+    const tempName = "T" + tempCounter++;
+    quadruples.push([operator, operandOne, operandTwo, tempName]);
+    operandsStack.push(tempName);
+    typesStack.push(oprResult);
+  }
+
   exitMain(ctx: MainContext) {
     console.log(quadruples);
+    console.log(typesStack);
   }
 }
 

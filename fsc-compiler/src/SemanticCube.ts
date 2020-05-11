@@ -1,3 +1,19 @@
+type SemanticCubeTypes = "Int" | "Float" | "Boolean";
+type SemanticCubeOperators =
+  | "+"
+  | "-"
+  | "/"
+  | "*"
+  | "%"
+  | "&&"
+  | "||"
+  | "=="
+  | "!="
+  | "<"
+  | ">"
+  | "<="
+  | ">=";
+
 const SemanticCube = {
   Int: {
     Int: {
@@ -142,4 +158,4 @@ const SemanticCube = {
   },
 };
 
-export default SemanticCube;
+export { SemanticCubeOperators, SemanticCubeTypes, SemanticCube };
