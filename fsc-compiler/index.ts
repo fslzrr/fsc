@@ -50,7 +50,24 @@ const input = `
     }
 `;
 
-const chars = new ANTLRInputStream(input);
+const expression = `
+  val a : Int = 10
+  val b : Int = 10
+  val c : Int = 10
+  val d : Int = 10
+  val e : Int = 10
+  val f : Int = 10
+  val k : Int = 10
+  val h : Int = 10
+  val j : Int = 10
+  val g : Int = 10
+  val l : Int = 10
+
+  val x : Int = ((a * b - c * d) > c + d * e / f) && (g * h - j > l - a) && b + c > d * f
+  
+  `;
+
+const chars = new ANTLRInputStream(expression);
 const lexer = new fsLexer(chars);
 const tokens = new CommonTokenStream(lexer);
 const parser = new fsParser(tokens);

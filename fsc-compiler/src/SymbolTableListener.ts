@@ -10,10 +10,31 @@ import {
   Else_expressionContext,
   FactorContext,
   Type_nameContext,
+  TermContext,
+  ExpContext,
+  ExpressionContext,
+  Binary_expressionContext,
 } from "../lib/fsParser";
 import { SymbolTable, ObjectSymbol, Variable } from "./SymbolTable";
+import {
+  isNameValid,
+  isVarDeclared,
+  isFuncDeclared,
+  isTypeDeclared,
+  extractObjectProperties,
+  extractFuncArgs,
+} from "./utils";
 
 const currentScope: SymbolTable[] = [];
+
+const binaryOperators = ["==", "!=", "<", ">", "<=", ">="];
+const relationalOperators = ["&&", "||"];
+
+const quadruples: [string, string, string, string][] = [];
+const oprStack: string[] = [];
+const operandsStack: string[] = [];
+const typesStack: string[] = [];
+let tempCounter = 1;
 
 class SymbolTableListener implements fsListener {
   enterMain(ctx: MainContext) {
@@ -26,9 +47,9 @@ class SymbolTableListener implements fsListener {
     const name = ctx.VAL_ID().text;
     const type = ctx.type_name().text;
 
-    this.isNameValid(name);
+    isNameValid(currentScope[0], name);
 
-    if (scope.argsMap.has(name) || scope.varsMap.has(name)) {
+    if (scope.varsMap.has(name)) {
       throw new Error(
         `Variable "${name}" has already been declared in this scope.`
       );
@@ -51,7 +72,7 @@ class SymbolTableListener implements fsListener {
     const scope = currentScope[currentScope.length - 1];
     const name = ctx.VAL_ID().text;
     const type = ctx.type_name().text;
-    scope.argsMap.set(name, { name, type });
+    scope.varsMap.set(name, { name, type });
   }
 
   exitFunc(ctx: FuncContext) {
@@ -59,12 +80,7 @@ class SymbolTableListener implements fsListener {
     const parentScope = currentScope[currentScope.length - 1].enclosedScope;
 
     const name = ctx.VAL_ID().text;
-    const args = ctx.arg().map((arg) => {
-      const name = arg.VAL_ID().text;
-      const type = arg.type_name().text;
-
-      return { name, type } as Variable;
-    });
+    const args = extractFuncArgs(ctx);
     const type = ctx.type_name().text;
 
     parentScope.funcMap.set(name, { name, args, type });
@@ -76,17 +92,9 @@ class SymbolTableListener implements fsListener {
     const mainScope = currentScope[0];
 
     const name = ctx.TYPE_ID().text;
-    const properties = ctx
-      .object_type()
-      .object_property()
-      .map((property) => {
-        const name = property.VAL_ID().text;
-        const type = property.type_name().text;
+    const properties = extractObjectProperties(ctx);
 
-        return { name, type } as Variable;
-      });
-
-    this.isNameValid(name);
+    isNameValid(currentScope[0], name);
 
     mainScope.userTypes.set(name, { name, properties: new Set(properties) });
   }
@@ -120,60 +128,128 @@ class SymbolTableListener implements fsListener {
     currentScope.pop();
   }
 
-  exitFactor(ctx: FactorContext) {
-    const scope = currentScope[currentScope.length - 1];
-    if (ctx.VAL_ID() && !this.isVarDeclared(scope, ctx.text)) {
-      throw new Error(`Undeclared variable "${ctx.VAL_ID().text}"`);
+  enterFactor(ctx: FactorContext) {
+    const termState = ctx.parent.text;
+
+    if (termState) {
+      oprStack.push(termState[termState.length - 1]);
     }
 
-    if (ctx.func_call() && !this.isFuncDeclared(scope, ctx.text)) {
-      const funcName = ctx.func_call().VAL_ID();
-      throw new Error(`Undeclared function "${funcName}"`);
+    if (ctx.start.text === "(") {
+      oprStack.push("(");
     }
   }
 
+  exitFactor(ctx: FactorContext) {
+    const scope = currentScope[currentScope.length - 1];
+    if (ctx.VAL_ID() && !isVarDeclared(scope, ctx.text)) {
+      throw new Error(`Undeclared variable "${ctx.VAL_ID().text}"`);
+    }
+
+    if (ctx.func_call() && !isFuncDeclared(scope, ctx.text)) {
+      const funcName = ctx.func_call().VAL_ID();
+      throw new Error(`Undeclared function "${funcName}"`);
+    }
+
+    if (ctx.VAL_ID() || ctx.literal()) {
+      operandsStack.push(ctx.text);
+    }
+
+    if (
+      oprStack[oprStack.length - 1] === "*" ||
+      oprStack[oprStack.length - 1] === "/" ||
+      oprStack[oprStack.length - 1] === "%"
+    ) {
+      const operator = oprStack.pop();
+      const operandTwo = operandsStack.pop();
+      const operandOne = operandsStack.pop();
+      const tempName = "T" + tempCounter++;
+      quadruples.push([operator, operandOne, operandTwo, tempName]);
+      operandsStack.push(tempName);
+    }
+
+    if (ctx.text[ctx.text.length - 1] === ")") {
+      oprStack.pop();
+    }
+  }
+
+  enterTerm(ctx: TermContext) {
+    const expState = ctx.parent.text;
+
+    if (expState) {
+      oprStack.push(expState[expState.length - 1]);
+    }
+  }
+
+  exitTerm(ctx: TermContext) {
+    if (
+      oprStack[oprStack.length - 1] === "+" ||
+      oprStack[oprStack.length - 1] === "-"
+    ) {
+      const operator = oprStack.pop();
+      const operandTwo = operandsStack.pop();
+      const operandOne = operandsStack.pop();
+      const tempName = "T" + tempCounter++;
+      quadruples.push([operator, operandOne, operandTwo, tempName]);
+      operandsStack.push(tempName);
+    }
+  }
+
+  enterExp(ctx: ExpContext) {
+    const operators = (ctx.parent as Binary_expressionContext).binary_operators();
+
+    if (operators && operators.length > 0) {
+      oprStack.push(operators[operators.length - 1].text);
+    }
+  }
+
+  exitExp(ctx: ExpContext) {
+    if (binaryOperators.some((x) => x === oprStack[oprStack.length - 1])) {
+      const operator = oprStack.pop();
+      const operandTwo = operandsStack.pop();
+      const operandOne = operandsStack.pop();
+      const tempName = "T" + tempCounter++;
+      quadruples.push([operator, operandOne, operandTwo, tempName]);
+      operandsStack.push(tempName);
+    }
+  }
+
+  enterBinary_expression(ctx: Binary_expressionContext) {
+    const operators = (ctx.parent as ExpressionContext).relational_operators();
+
+    if (operators && operators.length > 0) {
+      oprStack.push(operators[operators.length - 1].text);
+    }
+  }
+
+  exitBinary_expression(ctx: Binary_expressionContext) {
+    if (relationalOperators.some((x) => x === oprStack[oprStack.length - 1])) {
+      const operator = oprStack.pop();
+      const operandTwo = operandsStack.pop();
+      const operandOne = operandsStack.pop();
+      const tempName = "T" + tempCounter++;
+      quadruples.push([operator, operandOne, operandTwo, tempName]);
+      operandsStack.push(tempName);
+    }
+  }
+
+  enterExpression(ctx: ExpressionContext) {}
+
+  exitExpression(ctx: ExpressionContext) {}
+
   exitType_name(ctx: Type_nameContext) {
     const name = ctx.text;
-    if (!ctx.list_type() && !ctx.func_type() && !this.isTypeDeclared(name)) {
+    if (
+      !ctx.list_type() &&
+      !ctx.func_type() &&
+      !isTypeDeclared(currentScope[0], name)
+    ) {
       throw new Error(`Type "${name}" is not declared`);
     }
   }
 
   exitMain(ctx: MainContext) {
-    console.log(currentScope[0].userTypes);
-  }
-
-  isNameValid(name: string) {
-    const mainScope = currentScope[0];
-    if (mainScope.builtInTypes.has(name) || mainScope.userTypes.has(name)) {
-      throw new Error(`Type ${name} is already declared`);
-    }
-
-    if (mainScope.reservedKeywords.has(name)) {
-      throw new Error(`${name} is a reserved keyword`);
-    }
-
-    return true;
-  }
-
-  isVarDeclared(scope: SymbolTable, varName: string): boolean {
-    if (!scope) return false;
-    if (scope.argsMap.has(varName) || scope.varsMap.has(varName)) return true;
-    return this.isVarDeclared(scope.enclosedScope, varName);
-  }
-
-  isFuncDeclared(scope: SymbolTable, funcName: string): boolean {
-    if (!scope) return false;
-    if (scope.funcMap.get(funcName)) return true;
-    return this.isFuncDeclared(scope.enclosedScope, funcName);
-  }
-
-  isTypeDeclared(typeName: string): boolean {
-    const mainScope = currentScope[0];
-
-    return (
-      mainScope.builtInTypes.has(typeName) || mainScope.userTypes.has(typeName)
-    );
+    console.log(quadruples);
   }
 }
 

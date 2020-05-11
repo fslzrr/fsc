@@ -44,10 +44,8 @@ export type Function = {
 export class SymbolTable {
   scopeName: string;
   scopeLevel: number;
-  type: string;
   enclosedScope?: SymbolTable;
   varsMap: Map<string, Variable>;
-  argsMap: Map<string, Variable>;
   funcMap: Map<string, Function>;
 
   reservedKeywords: Set<string>;
@@ -63,7 +61,6 @@ export class SymbolTable {
     this.scopeLevel = scopeLevel;
     this.enclosedScope = enclosedScope;
     this.varsMap = new Map();
-    this.argsMap = new Map();
     this.funcMap = new Map();
 
     this.reservedKeywords = reservedKeywords;
