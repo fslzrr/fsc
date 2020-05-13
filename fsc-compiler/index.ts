@@ -64,10 +64,27 @@ const testOne = `
   val l : Int = 10
 
   val x : Int = ((a * b - c * d) > c + d * e / f) && (g * h - j > l - a) && b + c > d * f
-  val y : Int = a + 10 / 23
-  val z : Int = b * (2 + 4) - 10
   
   `;
+
+const testTwo = `
+    func (a: Int, b: Int) : Int -> {
+        val x : Int = 10
+        if 3 * (4 + 7) > 10 then {
+            10
+        } else if 0 == 0 then {
+            val y : Int = 3 * 6
+            if 3 > 2 then {
+                y
+            } else {
+                x
+            }
+        } else {
+            val z : Int = 10
+            30
+        }
+    }
+`;
 
 const chars = new ANTLRInputStream(testOne);
 const lexer = new fsLexer(chars);

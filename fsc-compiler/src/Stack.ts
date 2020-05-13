@@ -12,6 +12,10 @@ export class Stack<T> {
     this.length++;
   }
 
+  appendStack(stack: Stack<T>) {
+    this.buffer.push(...stack.buffer);
+  }
+
   pop(): T {
     if (this.length === 0) throw new Error("Empty Stack");
     this.length--;
@@ -29,6 +33,10 @@ export class Stack<T> {
 
   empty(): boolean {
     return this.length === 0;
+  }
+
+  elementAt(index: number) {
+    return this.buffer[index];
   }
 
   reset() {

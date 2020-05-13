@@ -14,6 +14,8 @@ import {
   ExpContext,
   ExpressionContext,
   Binary_expressionContext,
+  BlockContext,
+  AssignationContext,
 } from "../lib/fsParser";
 import { SymbolTable, ObjectSymbol, Variable } from "./SymbolTable";
 import {
@@ -29,6 +31,7 @@ import {
 } from "./utils";
 import { SemanticCubeTypes, SemanticCubeOperators } from "./SemanticCube";
 import { Stack } from "./Stack";
+import { ReservedKeywords } from "./fsc";
 
 const termOperators = ["*", "/", "%"];
 const expOperators = ["+", "-"];
@@ -37,9 +40,11 @@ const relationalOperators = ["&&", "||"];
 
 const currentScope = new Stack<SymbolTable>();
 const quadruples = new Stack<[string, string, string, string]>();
+const accumQuadruples = new Stack<[string, string, string, string]>();
 const oprStack = new Stack<string>();
 const operandsStack = new Stack<string>();
 const typesStack = new Stack<string>();
+const jumpsStack = new Stack<number>();
 let tempCounter = 1;
 
 class SymbolTableListener implements fsListener {
@@ -92,6 +97,8 @@ class SymbolTableListener implements fsListener {
     parentScope.funcMap.set(name, { name, args, type });
 
     currentScope.pop();
+
+    console.log("EXIT FUNC", quadruples);
   }
 
   exitType_declaration(ctx: Type_declarationContext) {
@@ -117,6 +124,13 @@ class SymbolTableListener implements fsListener {
 
   enterElse_if_expression(ctx: Else_if_expressionContext) {
     currentScope.pop();
+
+    // Quadruples management
+    if (!jumpsStack.empty()) {
+      const jump = jumpsStack.pop();
+      const quadruple = quadruples.elementAt(jump);
+      quadruple[3] = String(quadruples.length);
+    }
   }
 
   enterElse_expression(ctx: Else_expressionContext) {
@@ -128,10 +142,31 @@ class SymbolTableListener implements fsListener {
     );
 
     currentScope.push(scope);
+
+    // Quadruples Management
+    const jump = jumpsStack.pop();
+    const quadruple = quadruples.elementAt(jump);
+    quadruple[3] = String(quadruples.length);
   }
 
   exitElse_expression(ctx: Else_expressionContext) {
     currentScope.pop();
+  }
+
+  enterBlock(ctx: BlockContext) {
+    const then = ctx.parent.children[2];
+
+    if (then && then.text === ReservedKeywords.THEN) {
+      jumpsStack.push(quadruples.length);
+      quadruples.push(["GOTOF", quadruples.top()[3], "", ""]);
+    }
+  }
+
+  exitBlock(ctx: BlockContext) {
+    const returnExpression = ctx.all_expressions().expression();
+    if (returnExpression) {
+      quadruples.push(["RETURN", "", "", quadruples.top()[3]]);
+    }
   }
 
   /*
@@ -252,15 +287,16 @@ class SymbolTableListener implements fsListener {
     }
   }
 
-  enterExpression(ctx: ExpressionContext) {}
+  enterExpression(ctx: ExpressionContext) {
+    // Entered Assignation
+    if (ctx.parent.ruleContext.start.text === "=") {
+      oprStack.push("=");
+    }
+  }
 
   exitExpression(ctx: ExpressionContext) {
-    if (operandsStack.empty() || oprStack.empty()) {
-      console.log("QUADRUPLES", quadruples);
-      operandsStack.reset();
-      oprStack.reset();
-      typesStack.reset();
-      quadruples.reset();
+    if (oprStack.top() === "=") {
+      this.addAssignationQuadruple(ctx.parent.parent as Val_declarationContext);
     }
   }
 
@@ -296,6 +332,14 @@ class SymbolTableListener implements fsListener {
     quadruples.push([operator, operandOne, operandTwo, tempName]);
     operandsStack.push(tempName);
     typesStack.push(oprResult);
+  }
+
+  addAssignationQuadruple(ctx: Val_declarationContext) {
+    const operator = oprStack.pop();
+    const operandOne = operandsStack.pop();
+    const variable = ctx.VAL_ID().text;
+
+    quadruples.push([operator, operandOne, "", variable]);
   }
 
   exitMain(ctx: MainContext) {
