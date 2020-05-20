@@ -1,23 +1,19 @@
-import { Scope, Variable, ObjectSymbol } from "./SymbolTable";
-import {
-  Type_declarationContext,
-  FuncContext,
-  LiteralContext,
-  Func_literalContext,
-  ExpressionContext,
-} from "../lib/fsParser";
+import { Scope, Variable } from "./SymbolTable";
+import { Type_declarationContext, LiteralContext } from "../lib/fsParser";
 import {
   SemanticCubeTypes,
   SemanticCubeOperators,
   SemanticCube,
 } from "./SemanticCube";
 
-export function isNameValid(mainScope: Scope, name: string) {
-  if (mainScope.builtInTypes.has(name) || mainScope.userTypes.has(name)) {
+export function isNameValid(scope: Scope, name: string) {
+  if (scope.builtInTypes.has(name) || scope.userTypes.has(name)) {
+    console.error(`Type ${name} is already declared`);
     throw new Error(`Type ${name} is already declared`);
   }
 
-  if (mainScope.reservedKeywords.has(name)) {
+  if (scope.reservedKeywords.has(name)) {
+    console.error(`${name} is a reserved keyword`);
     throw new Error(`${name} is a reserved keyword`);
   }
 
@@ -30,16 +26,8 @@ export function isVarDeclared(scope: Scope, varName: string): boolean {
   return isVarDeclared(scope.enclosedScope, varName);
 }
 
-export function isFuncDeclared(scope: Scope, funcName: string): boolean {
-  if (!scope) return false;
-  if (scope.funcMap.get(funcName)) return true;
-  return isFuncDeclared(scope.enclosedScope, funcName);
-}
-
-export function isTypeDeclared(mainScope: Scope, typeName: string): boolean {
-  return (
-    mainScope.builtInTypes.has(typeName) || mainScope.userTypes.has(typeName)
-  );
+export function isTypeDeclared(scope: Scope, typeName: string): boolean {
+  return scope.builtInTypes.has(typeName) || scope.userTypes.has(typeName);
 }
 
 export function extractObjectProperties(ctx: Type_declarationContext) {
@@ -84,29 +72,4 @@ export function getExpressionType(
   const type = typeTwo[operator];
   if (!type) return "Error";
   return type;
-}
-
-export function isSingleExpression(expressionCtx: ExpressionContext): boolean {
-  if (expressionCtx.binary_expression().length > 1) return false;
-  const binaryExpression = expressionCtx.binary_expression()[0];
-  if (binaryExpression.exp().length > 1) return false;
-  const expExpression = binaryExpression.exp()[0];
-  if (expExpression.term().length > 1) return false;
-  const termExpression = expExpression.term()[0];
-  if (termExpression.factor().length > 1) return false;
-  const factorExpression = termExpression.factor()[0];
-
-  if (
-    factorExpression.VAL_ID() ||
-    factorExpression.literal() ||
-    factorExpression.func_call()
-  )
-    return true;
-
-  return isSingleExpression(factorExpression.expression());
-}
-
-export function getFunctionReturnTypeFromBlock(scope: Scope): string {
-  if (scope.scopeType === "Function") return scope.returnType;
-  return getFunctionReturnTypeFromBlock(scope.enclosedScope);
 }

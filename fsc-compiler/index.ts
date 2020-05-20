@@ -5,47 +5,47 @@ import SymbolTableListener from "./src/SymbolTableListener";
 import { fsListener } from "./lib/fsListener";
 import { ErrorListener } from "./src/ErrorListener";
 
-// const input = `
-//     type Person = {
-//         name: String,
-//         lastName: String,
-//         age: Int
-//     }
+const input = `
+    type Person = {
+        name: String,
+        lastName: String,
+        age: Int
+    }
 
-//     type Film = {
-//         title: String,
-//         budget: Int,
-//         synopsis: String
-//     }
+    type Film = {
+        title: String,
+        budget: Int,
+        synopsis: String
+    }
 
-//     val listOne : [Int] = [1, 3, 5, 7, 9]
-//     val listTwo : [Int] = [2, 4, 6, 8, 10]
+    val listOne : [Int] = [1, 3, 5, 7, 9]
+    val listTwo : [Int] = [2, 4, 6, 8, 10]
 
-//     mergeLists(listOne : [Int], listTwo : [Int]) : [Int] -> {
-//         val listOneHead : Int = 10
-//         val listTwoHead : Int = 20
-//         val person : Person = {
-//             name: "Jorge",
-//             lastName: "Iribe",
-//             age: 21
-//         }
+    mergeLists(listOne : [Int], listTwo : [Int]) : [Int] -> {
+        val listOneHead : Int = 10
+        val listTwoHead : Int = 20
+        val person : Person = {
+            name: "Jorge",
+            lastName: "Iribe",
+            age: 21
+        }
 
-//         if 0 == 0 then {
-//             val a : Int = 10
-//             val b : Int = 20
-//             if 3 == 0 then {
-//                 val i : Int = 10
-//                 val j : Int = 20
-//                 listOne
-//             } else {
-//                 listTwo
-//             }
-//         } else {
-//             val e : Int = 45
-//             listOne
-//         }
-//     }
-// `;
+        if 0 == 0 then {
+            val a : Int = 10
+            val b : Int = 20
+            if 3 == 0 then {
+                val i : Int = 10
+                val j : Int = 20
+                listOne
+            } else {
+                listTwo
+            }
+        } else {
+            val e : Int = 45
+            listOne
+        }
+    }
+`;
 
 const testTwo = `
     one (a: Int, b: Int) : Int -> {
@@ -84,17 +84,23 @@ const testTwo = `
 `;
 
 const testThree = `
+    val global : Int = 10
+
     one (a: Int) : Int -> {
-        3
+        10
+    }
+
+    test(a: Int) : Boolean -> {
+        True
     }
 
     two (a: Int, b: Int) : Int -> {
         val i : Int = one(a)
-        val j : Int = 20 * a
-        if 3 > 2 then {
-            i * j
+        val j : Int = 20 * one(a)
+        if True && test(i) then {
+            i
         } else {
-            val x : Int = 10
+            val x : Int = 5
             x
         }
     }
@@ -120,14 +126,3 @@ try {
 } catch (err) {
   console.error(err);
 }
-// Print recognized tokens
-
-// try {
-//   let i = 0;
-//   while (!tokens.consume()) {
-//     console.log(tokens.tokens[i].type);
-//     i++;
-//   }
-// } catch (err) {
-//   console.log("All tokens were consumed");
-// }

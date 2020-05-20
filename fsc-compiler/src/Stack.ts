@@ -27,16 +27,8 @@ export class Stack<T> {
     return topElem;
   }
 
-  bottom(): T {
-    return this.buffer[0];
-  }
-
   empty(): boolean {
     return this.length === 0;
-  }
-
-  elementAt(index: number) {
-    return this.buffer[index];
   }
 
   reset() {

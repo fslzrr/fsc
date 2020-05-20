@@ -18,17 +18,15 @@ import {
   ParamContext,
   Func_callContext,
 } from "../lib/fsParser";
-import { Scope } from "./SymbolTable";
+import { Scope, Function, Variable } from "./SymbolTable";
 import {
   isNameValid,
   isVarDeclared,
-  isFuncDeclared,
   isTypeDeclared,
   extractObjectProperties,
   getLiteralType,
   getValIDType,
   getExpressionType,
-  getFunctionReturnTypeFromBlock,
 } from "./utils";
 import { SemanticCubeTypes, SemanticCubeOperators } from "./SemanticCube";
 import { Stack } from "./Stack";
@@ -40,6 +38,9 @@ const termOperators = ["*", "/", "%"];
 const expOperators = ["+", "-"];
 const binaryOperators = ["==", "!=", "<", ">", "<=", ">="];
 const relationalOperators = ["&&", "||"];
+
+const functionTable = new Map<string, Function>();
+const globalVariablesTable = new Map<string, Variable>();
 
 // Stack containing the scopes of the program
 const currentScope = new Stack<Scope>();
@@ -57,10 +58,11 @@ const jumpsStack = new Stack<number>();
 const constantTable = new Map<number | string, number>();
 // Variable for counting the current temporal
 let tempCounter = 1;
+let argPointer = 0;
 
 class QuadruplesListener implements fsListener {
   enterMain(ctx: MainContext) {
-    const scope = new Scope("main", currentScope.length, "Global", undefined);
+    const scope = new Scope("Global", "Global", undefined);
     currentScope.push(scope);
   }
 
@@ -69,33 +71,49 @@ class QuadruplesListener implements fsListener {
     const name = ctx.VAL_ID().text;
     const type = ctx.type_name().text;
 
-    isNameValid(currentScope.bottom(), name);
+    isNameValid(currentScope.top(), name);
 
     if (scope.varsMap.has(name)) {
+      console.error(
+        `Variable "${name}" has already been declared in this scope.`
+      );
       throw new Error(
         `Variable "${name}" has already been declared in this scope.`
       );
     }
 
-    const varType = typesStack.pop();
+    const expressionType = typesStack.pop();
 
-    if (varType !== type) {
+    if (expressionType !== type) {
+      console.error(
+        `Type mismatch in variable "${name}", expected "${type}" but got "${expressionType}"`
+      );
       throw new Error(
-        `Type mismatch in variable "${name}", expected "${type}" but got "${varType}"`
+        `Type mismatch in variable "${name}", expected "${type}" but got "${expressionType}"`
       );
     }
     const variable = { name, type, virtualAddress: 1000 };
+
+    if (scope.scopeName === "Global") globalVariablesTable.set(name, variable);
+    else functionTable.get(scope.scopeName).variables.set(name, variable);
+
+    // Insert variable to current scope
     scope.varsMap.set(name, variable);
   }
 
   enterFunc(ctx: FuncContext) {
-    const scope = new Scope(
-      ctx.start.text,
-      currentScope.length,
-      "Function",
-      currentScope.top()
-    );
-    scope.cont = quadruples.length;
+    const funcName = ctx.start.text;
+    const scope = new Scope(funcName, "Function", currentScope.top());
+
+    functionTable.set(funcName, {
+      name: funcName,
+      args: [],
+      variables: new Map(),
+      tempVariables: [],
+      type: "",
+      startQuadruple: quadruples.length,
+      returnVirtualAddress: 1000,
+    });
 
     currentScope.push(scope);
   }
@@ -105,55 +123,42 @@ class QuadruplesListener implements fsListener {
     const name = ctx.VAL_ID().text;
     const type = ctx.type_name().text;
     const variable = { name, type, virtualAddress: 1000 };
-    scope.argsMap.set(name, variable);
+
+    const funcName = scope.scopeName;
+    const func = functionTable.get(funcName);
+    func.variables.set(name, variable);
+    func.args.push(variable);
+
+    // Insert arguments to Scope vars table
     scope.varsMap.set(name, variable);
   }
 
   exitParam(ctx: ParamContext) {
     const funcName = (ctx.parent as Func_callContext).VAL_ID().text;
-    const func = currentScope.bottom().funcMap.get(funcName);
+    const func = functionTable.get(funcName);
 
-    if (func.args.length === 0)
+    // Check if the amount of arguments is correct
+    if (func.args.length === 0) {
+      console.log("Too many arguments in function");
       throw new Error("Too many arguments in function");
+    }
 
-    const arg = func.args.shift();
+    const arg = func.args[argPointer];
     const operand = operandsStack.pop();
     const argType = typesStack.pop();
 
+    // Check if argument type is correct
     if (argType !== arg.type) {
-      console.log("Error Entered");
+      console.error("Type Mismatch in Arg");
       throw new Error("Type Mismatch in Args");
     }
 
+    // Add PARAM operation to quadruples
     quadruples.push(["PARAM", operand, "", String(arg.virtualAddress)]);
+    argPointer++;
   }
 
   exitFunc(ctx: FuncContext) {
-    // Insert Function to funcMap of the parentScope
-    const scope = currentScope.top();
-    const parentScope = scope.enclosedScope;
-
-    const name = ctx.VAL_ID().text;
-    const args = Array.from(scope.argsMap.values());
-    const type = ctx.type_name().text;
-    const cont = scope.cont;
-    // Insert both Args and Variables to the variables Array
-    const variables = [
-      ...args,
-      ...Array.from(currentScope.top().varsMap.values()),
-    ];
-    const tempVariables = scope.tempVariables;
-
-    parentScope.funcMap.set(name, {
-      name,
-      args,
-      type,
-      cont,
-      variables,
-      tempVariables,
-      returnVirtualAddress: 1000,
-    });
-
     currentScope.pop();
 
     // Add ENDFUNC Quadruple
@@ -166,20 +171,20 @@ class QuadruplesListener implements fsListener {
   }
 
   exitType_declaration(ctx: Type_declarationContext) {
-    const mainScope = currentScope.bottom();
+    const scope = currentScope.top();
 
     const name = ctx.TYPE_ID().text;
     const properties = extractObjectProperties(ctx);
 
-    isNameValid(currentScope.bottom(), name);
+    isNameValid(scope, name);
 
-    mainScope.userTypes.set(name, { name, properties: new Set(properties) });
+    scope.userTypes.set(name, { name, properties: new Set(properties) });
   }
 
   enterIf_expression(ctx: If_expressionContext) {
+    // Insert new scope to scopes stack
     const scope = new Scope(
-      ctx.start.text,
-      currentScope.length,
+      currentScope.top().scopeName,
       "Conditional",
       currentScope.top()
     );
@@ -190,7 +195,7 @@ class QuadruplesListener implements fsListener {
   enterElse_if_expression(ctx: Else_if_expressionContext) {
     currentScope.pop();
 
-    // Quadruples management
+    // Update jump in GOTOF quadruple
     if (!jumpsStack.empty()) {
       const jump = jumpsStack.pop();
       const quadruple = quadruples[jump];
@@ -201,15 +206,14 @@ class QuadruplesListener implements fsListener {
   enterElse_expression(ctx: Else_expressionContext) {
     currentScope.pop();
     const scope = new Scope(
-      ctx.start.text,
-      currentScope.length,
+      currentScope.top().scopeName,
       "Conditional",
       currentScope.top()
     );
 
     currentScope.push(scope);
 
-    // Quadruples Management
+    // Update jump in GOTOF quadruple
     const jump = jumpsStack.pop();
     const quadruple = quadruples[jump];
     quadruple[3] = String(quadruples.length);
@@ -231,16 +235,14 @@ class QuadruplesListener implements fsListener {
 
   exitBlock(ctx: BlockContext) {
     const returnExpression = ctx.all_expressions().expression();
+    const scopeName = currentScope.top().scopeName;
 
     if (returnExpression) {
       const operand = operandsStack.pop();
       const expressionType = typesStack.pop();
-      const functionReturnType = getFunctionReturnTypeFromBlock(
-        currentScope.top()
-      );
 
       // Check if the return type is correct
-      if (expressionType !== functionReturnType) {
+      if (expressionType !== functionTable.get(scopeName).type) {
         console.error("Incorrect return type in function");
         throw new Error("Incorrect return type in function");
       }
@@ -261,10 +263,7 @@ class QuadruplesListener implements fsListener {
       oprStack.push(termState[termState.length - 1] as Operators);
     }
 
-    if (
-      ctx.start.text === "(" ||
-      currentScope.bottom().funcMap.has(ctx.start.text)
-    ) {
+    if (ctx.start.text === "(" || functionTable.has(ctx.start.text)) {
       oprStack.push("(");
     }
   }
@@ -275,15 +274,19 @@ class QuadruplesListener implements fsListener {
   */
   exitFactor(ctx: FactorContext) {
     const scope = currentScope.top();
+    const scopeName = scope.scopeName;
     if (ctx.VAL_ID() && !isVarDeclared(scope, ctx.text)) {
+      console.error(`Undeclared variable "${ctx.VAL_ID().text}"`);
       throw new Error(`Undeclared variable "${ctx.VAL_ID().text}"`);
     }
 
     if (
       ctx.func_call() &&
-      !isFuncDeclared(scope, ctx.func_call().VAL_ID().text)
+      scopeName !== "Global" &&
+      !functionTable.has(scopeName)
     ) {
       const funcName = ctx.func_call().VAL_ID().text;
+      console.error(`Undeclared function "${funcName}"`);
       throw new Error(`Undeclared function "${funcName}"`);
     }
 
@@ -305,13 +308,8 @@ class QuadruplesListener implements fsListener {
     }
 
     if (isFuncCall) {
-      const funcName = ctx.func_call().VAL_ID().text;
-      const func = currentScope.bottom().funcMap.get(funcName);
-      quadruples.push(["GOSUB", funcName, "", ""]);
-      const temp = "T" + tempCounter++;
-      quadruples.push(["=", funcName, "", temp]);
-      operandsStack.push(temp);
-      typesStack.push(func.type);
+      this.addFunctionCallQuadruples(ctx.func_call().VAL_ID().text);
+      argPointer = 0;
     }
 
     if (termOperators.some((x) => x === oprStack.top())) {
@@ -396,6 +394,15 @@ class QuadruplesListener implements fsListener {
     if (oprStack.top() === "=") {
       this.addAssignationQuadruple(ctx.parent.parent as Val_declarationContext);
     }
+
+    if (ctx.parent instanceof If_expressionContext) {
+      const type = typesStack.pop();
+      operandsStack.pop();
+      if (type !== "Boolean") {
+        console.error("Expression type must be boolean");
+        throw new Error("Expression type must be boolean");
+      }
+    }
   }
 
   exitType_name(ctx: Type_nameContext) {
@@ -404,21 +411,24 @@ class QuadruplesListener implements fsListener {
     if (
       !ctx.list_type() &&
       !ctx.func_type() &&
-      !isTypeDeclared(currentScope.bottom(), name)
+      !isTypeDeclared(currentScope.top(), name)
     ) {
+      console.error(`Type "${name}" is not declared`);
       throw new Error(`Type "${name}" is not declared`);
     }
 
-    // Add return type to Function Scope
+    // Add return type to Function Table
     if (ctx.parent instanceof FuncContext) {
+      const funcName = currentScope.top().scopeName;
       const returnType =
         ctx.parent.children[ctx.parent.children.length - 1].text;
-      currentScope.top().returnType = returnType;
+      functionTable.get(funcName).type = returnType;
     }
   }
 
   // Adds a quadruple to the quadruple array, making sure that the operation is valid
   addQuadruple() {
+    const scopeName = currentScope.top().scopeName;
     const operator = oprStack.pop() as SemanticCubeOperators;
     const operandTwo = operandsStack.pop();
     const operandTwoType = typesStack.pop() as SemanticCubeTypes;
@@ -431,18 +441,20 @@ class QuadruplesListener implements fsListener {
       operator
     );
 
-    if (oprResult === "Error") throw new Error("Type Error in Expression");
+    if (oprResult === "Error") {
+      console.error("Type Error in Expression");
+      throw new Error("Type Error in Expression");
+    }
 
     const tempName = "T" + tempCounter++;
+    const variable = {
+      name: tempName,
+      type: oprResult,
+      virtualAddress: 1000,
+    };
 
-    if (currentScope.top().scopeType === "Conditional") {
-    } else {
-      currentScope.top().tempVariables.push({
-        name: tempName,
-        type: oprResult,
-        virtualAddress: 1000,
-      });
-    }
+    if (scopeName === "Global") globalVariablesTable.set(tempName, variable);
+    else functionTable.get(scopeName).tempVariables.push(variable);
 
     quadruples.push([operator, operandOne, operandTwo, tempName]);
     operandsStack.push(tempName);
@@ -457,6 +469,24 @@ class QuadruplesListener implements fsListener {
     quadruples.push([operator, operandOne, "", variable]);
   }
 
+  addFunctionCallQuadruples(funcName: string) {
+    const func = functionTable.get(funcName);
+    quadruples.push(["GOSUB", funcName, "", ""]);
+    const temp = "T" + tempCounter++;
+    quadruples.push(["=", funcName, "", temp]);
+    operandsStack.push(temp);
+    typesStack.push(func.type);
+
+    const scopeName = currentScope.top().scopeName;
+    const tempVariable: Variable = {
+      name: temp,
+      type: func.type,
+      virtualAddress: 1000,
+    };
+    if (scopeName === "Global") globalVariablesTable.set(temp, tempVariable);
+    else functionTable.get(scopeName).tempVariables.push(tempVariable);
+  }
+
   exitMain(ctx: MainContext) {
     console.log("QUADRUPLES", quadruples);
     console.log("OPERANDS", operandsStack);
@@ -464,6 +494,9 @@ class QuadruplesListener implements fsListener {
     console.log("TYPES", typesStack);
     console.log("Scope", currentScope);
     console.log(constantTable);
+    console.log(globalVariablesTable);
+    console.log(functionTable);
+    debugger;
   }
 }
 
