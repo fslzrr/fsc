@@ -12,6 +12,47 @@ export const ReservedKeywords = {
   STRING: "String",
 };
 
+export type Operators =
+  | "*"
+  | "/"
+  | "%"
+  | "+"
+  | "-"
+  | "<"
+  | ">"
+  | "<="
+  | ">="
+  | "=="
+  | "!="
+  | "&&"
+  | "||"
+  | "="
+  | "(";
+
+export const SymbolCodes = {
+  "*": 1,
+  "/": 2,
+  "%": 3,
+  "+": 4,
+  "-": 5,
+  "<": 6,
+  ">": 7,
+  "<=": 8,
+  ">=": 9,
+  "==": 10,
+  "!=": 11,
+  "&&": 12,
+  "||": 13,
+  "=": 14,
+  GOTOF: 15,
+  RETURN: 16,
+  "(": 17,
+  GOSUB: 18,
+  ENDFUNC: 19,
+  PARAM: 20,
+  ERA: 21,
+};
+
 export const getKeywords = () => {
   return Object.values(ReservedKeywords);
 };

@@ -2,7 +2,7 @@ grammar fs;
 
 // GRAMMAR
 
-main : type_declaration* val_declaration* func* func_call* EOF;
+main : type_declaration* val_declaration* func* expression* EOF;
 
 // Types
 
@@ -16,8 +16,8 @@ object_type : OPEN_BRACKET object_property (COMMA object_property)* CLOSE_BRACKE
 list_type : OPEN_SQUARE_BRACKET type_name CLOSE_SQUARE_BRACKET;
 
 func_type : OPEN_PAREN type_name (ARROW type_name)+ CLOSE_PAREN;
-
-literal : BOOL_LITERAL | 
+bool_literal : TRUE | FALSE;
+literal : bool_literal | 
         INT_LITERAL | 
         FLOAT_LITERAL | 
         CHAR_LITERAL | 
@@ -40,8 +40,9 @@ func_literal :
 type_declaration : TYPE TYPE_ID ASSIGN_OP object_type;
 val_declaration : VAL VAL_ID COLON type_name assignation;
 arg : VAL_ID COLON type_name;
+param: expression;
 func : VAL_ID OPEN_PAREN arg (COMMA arg)* CLOSE_PAREN COLON type_name ARROW block;
-func_call : VAL_ID OPEN_PAREN expression (COMMA expression)* CLOSE_PAREN;
+func_call : VAL_ID OPEN_PAREN param (COMMA param)* CLOSE_PAREN;
 
 binary_operators :  EQ | NOT_EQ | LOWER_THAN | GREATER_THAN | LOWER_THAN_OR_EQ | LOWER_THAN_OR_EQ;
 relational_operators : AND | OR;
@@ -82,7 +83,6 @@ fragment UPPERCASE  : [A-Z] ;
 fragment NUMS : [0-9];
 
 // Literals
-BOOL_LITERAL : (TRUE | FALSE);
 INT_LITERAL : ('-')?NUMS+;
 FLOAT_LITERAL : ('-')?NUMS+'.'NUMS+;
 CHAR_LITERAL : '\''(LOWERCASE | UPPERCASE)'\'';

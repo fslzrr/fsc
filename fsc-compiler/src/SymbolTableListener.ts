@@ -15,41 +15,52 @@ import {
   ExpressionContext,
   Binary_expressionContext,
   BlockContext,
-  AssignationContext,
+  ParamContext,
+  Func_callContext,
 } from "../lib/fsParser";
-import { SymbolTable, ObjectSymbol, Variable } from "./SymbolTable";
+import { Scope } from "./SymbolTable";
 import {
   isNameValid,
   isVarDeclared,
   isFuncDeclared,
   isTypeDeclared,
   extractObjectProperties,
-  extractFuncArgs,
   getLiteralType,
   getValIDType,
   getExpressionType,
+  getFunctionReturnTypeFromBlock,
 } from "./utils";
 import { SemanticCubeTypes, SemanticCubeOperators } from "./SemanticCube";
 import { Stack } from "./Stack";
-import { ReservedKeywords } from "./fsc";
+import { ReservedKeywords, SymbolCodes, Operators } from "./fsc";
 
+// Arrays with the fsc supported operators.
+// They are classified by their precedence.
 const termOperators = ["*", "/", "%"];
 const expOperators = ["+", "-"];
 const binaryOperators = ["==", "!=", "<", ">", "<=", ">="];
 const relationalOperators = ["&&", "||"];
 
-const currentScope = new Stack<SymbolTable>();
-const quadruples = new Stack<[string, string, string, string]>();
-const accumQuadruples = new Stack<[string, string, string, string]>();
-const oprStack = new Stack<string>();
+// Stack containing the scopes of the program
+const currentScope = new Stack<Scope>();
+// Array with all the program's quadruples
+const quadruples: [string, string, string, string][] = [];
+// Stack of Operators
+const oprStack = new Stack<Operators>();
+// Stack of Operands
 const operandsStack = new Stack<string>();
+// Stack of Types
 const typesStack = new Stack<string>();
+// Stack of Jumps
 const jumpsStack = new Stack<number>();
+// Map with the constants memory address
+const constantTable = new Map<number | string, number>();
+// Variable for counting the current temporal
 let tempCounter = 1;
 
-class SymbolTableListener implements fsListener {
+class QuadruplesListener implements fsListener {
   enterMain(ctx: MainContext) {
-    const scope = new SymbolTable("main", currentScope.length, undefined);
+    const scope = new Scope("main", currentScope.length, "Global", undefined);
     currentScope.push(scope);
   }
 
@@ -66,15 +77,25 @@ class SymbolTableListener implements fsListener {
       );
     }
 
-    scope.varsMap.set(name, { name, type });
+    const varType = typesStack.pop();
+
+    if (varType !== type) {
+      throw new Error(
+        `Type mismatch in variable "${name}", expected "${type}" but got "${varType}"`
+      );
+    }
+    const variable = { name, type, virtualAddress: 1000 };
+    scope.varsMap.set(name, variable);
   }
 
   enterFunc(ctx: FuncContext) {
-    const scope = new SymbolTable(
+    const scope = new Scope(
       ctx.start.text,
       currentScope.length,
+      "Function",
       currentScope.top()
     );
+    scope.cont = quadruples.length;
 
     currentScope.push(scope);
   }
@@ -83,22 +104,65 @@ class SymbolTableListener implements fsListener {
     const scope = currentScope.top();
     const name = ctx.VAL_ID().text;
     const type = ctx.type_name().text;
-    scope.varsMap.set(name, { name, type });
+    const variable = { name, type, virtualAddress: 1000 };
+    scope.argsMap.set(name, variable);
+    scope.varsMap.set(name, variable);
+  }
+
+  exitParam(ctx: ParamContext) {
+    const funcName = (ctx.parent as Func_callContext).VAL_ID().text;
+    const func = currentScope.bottom().funcMap.get(funcName);
+
+    if (func.args.length === 0)
+      throw new Error("Too many arguments in function");
+
+    const arg = func.args.shift();
+    const operand = operandsStack.pop();
+    const argType = typesStack.pop();
+
+    if (argType !== arg.type) {
+      console.log("Error Entered");
+      throw new Error("Type Mismatch in Args");
+    }
+
+    quadruples.push(["PARAM", operand, "", String(arg.virtualAddress)]);
   }
 
   exitFunc(ctx: FuncContext) {
     // Insert Function to funcMap of the parentScope
-    const parentScope = currentScope.top().enclosedScope;
+    const scope = currentScope.top();
+    const parentScope = scope.enclosedScope;
 
     const name = ctx.VAL_ID().text;
-    const args = extractFuncArgs(ctx);
+    const args = Array.from(scope.argsMap.values());
     const type = ctx.type_name().text;
+    const cont = scope.cont;
+    // Insert both Args and Variables to the variables Array
+    const variables = [
+      ...args,
+      ...Array.from(currentScope.top().varsMap.values()),
+    ];
+    const tempVariables = scope.tempVariables;
 
-    parentScope.funcMap.set(name, { name, args, type });
+    parentScope.funcMap.set(name, {
+      name,
+      args,
+      type,
+      cont,
+      variables,
+      tempVariables,
+      returnVirtualAddress: 1000,
+    });
 
     currentScope.pop();
 
-    console.log("EXIT FUNC", quadruples);
+    // Add ENDFUNC Quadruple
+    quadruples.push(["ENDFUNC", "", "", ""]);
+  }
+
+  enterFunc_call(ctx: Func_callContext) {
+    const funcName = ctx.start.text;
+    quadruples.push(["ERA", funcName, "", ""]);
   }
 
   exitType_declaration(ctx: Type_declarationContext) {
@@ -113,9 +177,10 @@ class SymbolTableListener implements fsListener {
   }
 
   enterIf_expression(ctx: If_expressionContext) {
-    const scope = new SymbolTable(
+    const scope = new Scope(
       ctx.start.text,
       currentScope.length,
+      "Conditional",
       currentScope.top()
     );
 
@@ -128,16 +193,17 @@ class SymbolTableListener implements fsListener {
     // Quadruples management
     if (!jumpsStack.empty()) {
       const jump = jumpsStack.pop();
-      const quadruple = quadruples.elementAt(jump);
+      const quadruple = quadruples[jump];
       quadruple[3] = String(quadruples.length);
     }
   }
 
   enterElse_expression(ctx: Else_expressionContext) {
     currentScope.pop();
-    const scope = new SymbolTable(
+    const scope = new Scope(
       ctx.start.text,
       currentScope.length,
+      "Conditional",
       currentScope.top()
     );
 
@@ -145,7 +211,7 @@ class SymbolTableListener implements fsListener {
 
     // Quadruples Management
     const jump = jumpsStack.pop();
-    const quadruple = quadruples.elementAt(jump);
+    const quadruple = quadruples[jump];
     quadruple[3] = String(quadruples.length);
   }
 
@@ -154,18 +220,33 @@ class SymbolTableListener implements fsListener {
   }
 
   enterBlock(ctx: BlockContext) {
-    const then = ctx.parent.children[2];
+    const parentChildren = ctx.parent.children;
+    const then = parentChildren[2];
 
     if (then && then.text === ReservedKeywords.THEN) {
       jumpsStack.push(quadruples.length);
-      quadruples.push(["GOTOF", quadruples.top()[3], "", ""]);
+      quadruples.push(["GOTOF", quadruples[quadruples.length - 1][3], "", ""]);
     }
   }
 
   exitBlock(ctx: BlockContext) {
     const returnExpression = ctx.all_expressions().expression();
+
     if (returnExpression) {
-      quadruples.push(["RETURN", "", "", quadruples.top()[3]]);
+      const operand = operandsStack.pop();
+      const expressionType = typesStack.pop();
+      const functionReturnType = getFunctionReturnTypeFromBlock(
+        currentScope.top()
+      );
+
+      // Check if the return type is correct
+      if (expressionType !== functionReturnType) {
+        console.error("Incorrect return type in function");
+        throw new Error("Incorrect return type in function");
+      }
+
+      // Add return quadruple
+      quadruples.push(["RETURN", "", "", operand]);
     }
   }
 
@@ -177,10 +258,13 @@ class SymbolTableListener implements fsListener {
     const termState = ctx.parent.text;
 
     if (termState) {
-      oprStack.push(termState[termState.length - 1]);
+      oprStack.push(termState[termState.length - 1] as Operators);
     }
 
-    if (ctx.start.text === "(") {
+    if (
+      ctx.start.text === "(" ||
+      currentScope.bottom().funcMap.has(ctx.start.text)
+    ) {
       oprStack.push("(");
     }
   }
@@ -199,21 +283,35 @@ class SymbolTableListener implements fsListener {
       ctx.func_call() &&
       !isFuncDeclared(scope, ctx.func_call().VAL_ID().text)
     ) {
-      const funcName = ctx.func_call().VAL_ID();
+      const funcName = ctx.func_call().VAL_ID().text;
       throw new Error(`Undeclared function "${funcName}"`);
     }
 
     const isValID = ctx.VAL_ID();
     const isLiteral = ctx.literal();
+    const isFuncCall = ctx.func_call();
 
     if (isValID || isLiteral) {
       operandsStack.push(ctx.text);
       if (isValID) typesStack.push(getValIDType(scope, ctx.text));
-      else typesStack.push(getLiteralType(isLiteral));
+      else {
+        constantTable.set(ctx.literal().text, 1000);
+        typesStack.push(getLiteralType(isLiteral));
+      }
     }
 
     if (ctx.text[ctx.text.length - 1] === ")") {
       oprStack.pop();
+    }
+
+    if (isFuncCall) {
+      const funcName = ctx.func_call().VAL_ID().text;
+      const func = currentScope.bottom().funcMap.get(funcName);
+      quadruples.push(["GOSUB", funcName, "", ""]);
+      const temp = "T" + tempCounter++;
+      quadruples.push(["=", funcName, "", temp]);
+      operandsStack.push(temp);
+      typesStack.push(func.type);
     }
 
     if (termOperators.some((x) => x === oprStack.top())) {
@@ -229,7 +327,7 @@ class SymbolTableListener implements fsListener {
     const expState = ctx.parent.text;
 
     if (expState) {
-      oprStack.push(expState[expState.length - 1]);
+      oprStack.push(expState[expState.length - 1] as Operators);
     }
   }
 
@@ -251,7 +349,7 @@ class SymbolTableListener implements fsListener {
     const operators = (ctx.parent as Binary_expressionContext).binary_operators();
 
     if (operators && operators.length > 0) {
-      oprStack.push(operators[operators.length - 1].text);
+      oprStack.push(operators[operators.length - 1].text as Operators);
     }
   }
 
@@ -273,7 +371,7 @@ class SymbolTableListener implements fsListener {
     const operators = (ctx.parent as ExpressionContext).relational_operators();
 
     if (operators && operators.length > 0) {
-      oprStack.push(operators[operators.length - 1].text);
+      oprStack.push(operators[operators.length - 1].text as Operators);
     }
   }
 
@@ -300,8 +398,8 @@ class SymbolTableListener implements fsListener {
     }
   }
 
-  // Check if type used exists
   exitType_name(ctx: Type_nameContext) {
+    // Check if type used exists
     const name = ctx.text;
     if (
       !ctx.list_type() &&
@@ -309,6 +407,13 @@ class SymbolTableListener implements fsListener {
       !isTypeDeclared(currentScope.bottom(), name)
     ) {
       throw new Error(`Type "${name}" is not declared`);
+    }
+
+    // Add return type to Function Scope
+    if (ctx.parent instanceof FuncContext) {
+      const returnType =
+        ctx.parent.children[ctx.parent.children.length - 1].text;
+      currentScope.top().returnType = returnType;
     }
   }
 
@@ -329,6 +434,16 @@ class SymbolTableListener implements fsListener {
     if (oprResult === "Error") throw new Error("Type Error in Expression");
 
     const tempName = "T" + tempCounter++;
+
+    if (currentScope.top().scopeType === "Conditional") {
+    } else {
+      currentScope.top().tempVariables.push({
+        name: tempName,
+        type: oprResult,
+        virtualAddress: 1000,
+      });
+    }
+
     quadruples.push([operator, operandOne, operandTwo, tempName]);
     operandsStack.push(tempName);
     typesStack.push(oprResult);
@@ -347,7 +462,9 @@ class SymbolTableListener implements fsListener {
     console.log("OPERANDS", operandsStack);
     console.log("OPERATORS", oprStack);
     console.log("TYPES", typesStack);
+    console.log("Scope", currentScope);
+    console.log(constantTable);
   }
 }
 
-export default SymbolTableListener;
+export default QuadruplesListener;

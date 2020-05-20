@@ -33,20 +33,32 @@ export type ObjectSymbol = {
 export type Variable = {
   name: string;
   type: string;
+  virtualAddress: number;
 };
 
 export type Function = {
   name: string;
   args: Variable[];
+  variables: Variable[];
+  tempVariables: Variable[];
   type: string;
+  cont: number;
+  returnVirtualAddress: number;
 };
 
-export class SymbolTable {
+type ScopeType = "Global" | "Function" | "Conditional";
+
+export class Scope {
   scopeName: string;
   scopeLevel: number;
-  enclosedScope?: SymbolTable;
+  scopeType: ScopeType;
+  enclosedScope?: Scope;
   varsMap: Map<string, Variable>;
+  argsMap: Map<string, Variable>;
   funcMap: Map<string, Function>;
+  tempVariables: Variable[];
+  returnType: string;
+  cont?: number;
 
   reservedKeywords: Set<string>;
   builtInTypes: Set<string>;
@@ -55,13 +67,17 @@ export class SymbolTable {
   constructor(
     scopeName: string,
     scopeLevel: number,
-    enclosedScope?: SymbolTable
+    scopeType: ScopeType,
+    enclosedScope?: Scope
   ) {
     this.scopeName = scopeName;
     this.scopeLevel = scopeLevel;
+    this.scopeType = scopeType;
     this.enclosedScope = enclosedScope;
     this.varsMap = new Map();
+    this.argsMap = new Map();
     this.funcMap = new Map();
+    this.tempVariables = [];
 
     this.reservedKeywords = reservedKeywords;
     this.builtInTypes = builtInTypes;
