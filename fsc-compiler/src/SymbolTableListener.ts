@@ -69,6 +69,164 @@ class QuadruplesListener implements fsListener {
     currentScope.push(scope);
   }
 
+  // Start linear expressions quadruple generation
+
+  /*
+  Check if the parser read a Term Operator. If yes, add it
+  to the oprStack
+   */
+  enterFactor(ctx: FactorContext) {
+    const termState = ctx.parent.text;
+
+    if (termState) {
+      oprStack.push(termState[termState.length - 1] as Operators);
+    }
+
+    if (ctx.start.text === "(" || functionTable.has(ctx.start.text)) {
+      oprStack.push("(");
+    }
+  }
+
+  /*
+  When you exit a Factor, check if there is
+  a pending Term expression to perform. If yes, add a new quadruple.
+  */
+  exitFactor(ctx: FactorContext) {
+    const scope = currentScope.top();
+    const scopeName = scope.scopeName;
+    if (ctx.VAL_ID() && !isVarDeclared(scope, ctx.text)) {
+      console.error(`Undeclared variable "${ctx.VAL_ID().text}"`);
+      throw new Error(`Undeclared variable "${ctx.VAL_ID().text}"`);
+    }
+
+    if (
+      ctx.func_call() &&
+      scopeName !== "Global" &&
+      !functionTable.has(scopeName)
+    ) {
+      const funcName = ctx.func_call().VAL_ID().text;
+      console.error(`Undeclared function "${funcName}"`);
+      throw new Error(`Undeclared function "${funcName}"`);
+    }
+
+    const isValID = ctx.VAL_ID();
+    const isLiteral = ctx.literal();
+    const isFuncCall = ctx.func_call();
+
+    if (isValID || isLiteral) {
+      operandsStack.push(ctx.text);
+      if (isValID) typesStack.push(getValIDType(scope, ctx.text));
+      else {
+        constantTable.set(ctx.literal().text, 1000);
+        typesStack.push(getLiteralType(isLiteral));
+      }
+    }
+
+    if (ctx.text[ctx.text.length - 1] === ")") {
+      oprStack.pop();
+    }
+
+    if (isFuncCall) {
+      this.addFunctionCallQuadruples(ctx.func_call().VAL_ID().text);
+      argPointer = 0;
+    }
+
+    if (termOperators.some((x) => x === oprStack.top())) {
+      this.addQuadruple();
+    }
+  }
+
+  /*
+  Check if the parser read a Exp Operator. If yes, add it
+  to the oprStack
+   */
+  enterTerm(ctx: TermContext) {
+    const expState = ctx.parent.text;
+
+    if (expState) {
+      oprStack.push(expState[expState.length - 1] as Operators);
+    }
+  }
+
+  /*
+  When you exit a Term, check if there is
+  a pending Exp expression to perform. If yes, add a new quadruple.
+  */
+  exitTerm(ctx: TermContext) {
+    if (expOperators.some((x) => x === oprStack.top())) {
+      this.addQuadruple();
+    }
+  }
+
+  /*
+  Check if the parser read a Binary Operator. If yes, add it
+  to the oprStack
+   */
+  enterExp(ctx: ExpContext) {
+    const operators = (ctx.parent as Binary_expressionContext).binary_operators();
+
+    if (operators && operators.length > 0) {
+      oprStack.push(operators[operators.length - 1].text as Operators);
+    }
+  }
+
+  /*
+  When you exit an Exp, check if there is
+  a pending Binary expression to perform. If yes, add a new quadruple.
+  */
+  exitExp(ctx: ExpContext) {
+    if (binaryOperators.some((x) => x === oprStack.top())) {
+      this.addQuadruple();
+    }
+  }
+
+  /*
+  Check if the parser read a Relational Operator. If yes, add it
+  to the oprStack
+   */
+  enterBinary_expression(ctx: Binary_expressionContext) {
+    const operators = (ctx.parent as ExpressionContext).relational_operators();
+
+    if (operators && operators.length > 0) {
+      oprStack.push(operators[operators.length - 1].text as Operators);
+    }
+  }
+
+  /*
+  When you exit a Binary Expression, check if there is 
+  a pending Relational expression to perform. If yes, add a new quadruple.
+  */
+  exitBinary_expression(ctx: Binary_expressionContext) {
+    if (relationalOperators.some((x) => x === oprStack.top())) {
+      this.addQuadruple();
+    }
+  }
+
+  enterExpression(ctx: ExpressionContext) {
+    // Entered Assignation
+    if (ctx.parent.ruleContext.start.text === "=") {
+      oprStack.push("=");
+    }
+  }
+
+  exitExpression(ctx: ExpressionContext) {
+    if (oprStack.top() === "=") {
+      this.addAssignationQuadruple(ctx.parent.parent as Val_declarationContext);
+    }
+
+    // Check if if expression is of Boolean type
+    if (ctx.parent instanceof If_expressionContext) {
+      const type = typesStack.pop();
+      operandsStack.pop();
+      if (type !== "Boolean") {
+        console.error("Expression type must be boolean");
+        throw new Error("Expression type must be boolean");
+      }
+    }
+  }
+
+  // End linear expressions quadruple generation
+
   exitVal_declaration(ctx: Val_declarationContext) {
     const scope = currentScope.top();
     const name = ctx.VAL_ID().text;
@@ -256,159 +414,6 @@ class QuadruplesListener implements fsListener {
 
       // Add return quadruple
       quadruples.push(["RETURN", "", "", operand]);
-    }
-  }
-
-  /*
-  Check if the parser read a Term Operator. If yes, add it
-  to the oprStack
-   */
-  enterFactor(ctx: FactorContext) {
-    const termState = ctx.parent.text;
-
-    if (termState) {
-      oprStack.push(termState[termState.length - 1] as Operators);
-    }
-
-    if (ctx.start.text === "(" || functionTable.has(ctx.start.text)) {
-      oprStack.push("(");
-    }
-  }
-
-  /*
-  When you exit a Factor, check if there is
-  a pending Term expression to perform. If yes, add a new quadruple.
-  */
-  exitFactor(ctx: FactorContext) {
-    const scope = currentScope.top();
-    const scopeName = scope.scopeName;
-    if (ctx.VAL_ID() && !isVarDeclared(scope, ctx.text)) {
-      console.error(`Undeclared variable "${ctx.VAL_ID().text}"`);
-      throw new Error(`Undeclared variable "${ctx.VAL_ID().text}"`);
-    }
-
-    if (
-      ctx.func_call() &&
-      scopeName !== "Global" &&
-      !functionTable.has(scopeName)
-    ) {
-      const funcName = ctx.func_call().VAL_ID().text;
-      console.error(`Undeclared function "${funcName}"`);
-      throw new Error(`Undeclared function "${funcName}"`);
-    }
-
-    const isValID = ctx.VAL_ID();
-    const isLiteral = ctx.literal();
-    const isFuncCall = ctx.func_call();
-
-    if (isValID || isLiteral) {
-      operandsStack.push(ctx.text);
-      if (isValID) typesStack.push(getValIDType(scope, ctx.text));
-      else {
-        constantTable.set(ctx.literal().text, 1000);
-        typesStack.push(getLiteralType(isLiteral));
-      }
-    }
-
-    if (ctx.text[ctx.text.length - 1] === ")") {
-      oprStack.pop();
-    }
-
-    if (isFuncCall) {
-      this.addFunctionCallQuadruples(ctx.func_call().VAL_ID().text);
-      argPointer = 0;
-    }
-
-    if (termOperators.some((x) => x === oprStack.top())) {
-      this.addQuadruple();
-    }
-  }
-
-  /*
-  Check if the parser read a Exp Operator. If yes, add it
-  to the oprStack
-   */
-  enterTerm(ctx: TermContext) {
-    const expState = ctx.parent.text;
-
-    if (expState) {
-      oprStack.push(expState[expState.length - 1] as Operators);
-    }
-  }
-
-  /*
-  When you exit a Term, check if there is
-  a pending Exp expression to perform. If yes, add a new quadruple.
-  */
-  exitTerm(ctx: TermContext) {
-    if (expOperators.some((x) => x === oprStack.top())) {
-      this.addQuadruple();
-    }
-  }
-
-  /*
-  Check if the parser read a Binary Operator. If yes, add it
-  to the oprStack
-   */
-  enterExp(ctx: ExpContext) {
-    const operators = (ctx.parent as Binary_expressionContext).binary_operators();
-
-    if (operators && operators.length > 0) {
-      oprStack.push(operators[operators.length - 1].text as Operators);
-    }
-  }
-
-  /*
-  When you exit an Exp, check if there is
-  a pending Binary expression to perform. If yes, add a new quadruple.
-  */
-  exitExp(ctx: ExpContext) {
-    if (binaryOperators.some((x) => x === oprStack.top())) {
-      this.addQuadruple();
-    }
-  }
-
-  /*
-  Check if the parser read a Relational Operator. If yes, add it
-  to the oprStack
-   */
-  enterBinary_expression(ctx: Binary_expressionContext) {
-    const operators = (ctx.parent as ExpressionContext).relational_operators();
-
-    if (operators && operators.length > 0) {
-      oprStack.push(operators[operators.length - 1].text as Operators);
-    }
-  }
-
-  /*
-  When you exit a Binary Expression, check if there is 
-  a pending Relational expression to perform. If yes, add a new quadruple.
-  */
-  exitBinary_expression(ctx: Binary_expressionContext) {
-    if (relationalOperators.some((x) => x === oprStack.top())) {
-      this.addQuadruple();
-    }
-  }
-
-  enterExpression(ctx: ExpressionContext) {
-    // Entered Assignation
-    if (ctx.parent.ruleContext.start.text === "=") {
-      oprStack.push("=");
-    }
-  }
-
-  exitExpression(ctx: ExpressionContext) {
-    if (oprStack.top() === "=") {
-      this.addAssignationQuadruple(ctx.parent.parent as Val_declarationContext);
-    }
-
-    if (ctx.parent instanceof If_expressionContext) {
-      const type = typesStack.pop();
-      operandsStack.pop();
-      if (type !== "Boolean") {
-        console.error("Expression type must be boolean");
-        throw new Error("Expression type must be boolean");
-      }
     }
   }
 
