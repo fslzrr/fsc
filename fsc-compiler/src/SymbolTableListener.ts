@@ -31,6 +31,7 @@ import {
 import { SemanticCubeTypes, SemanticCubeOperators } from "./SemanticCube";
 import { Stack } from "./Stack";
 import { ReservedKeywords, SymbolCodes, Operators } from "./fsc";
+import memoryMap, { MemoryMap } from "./memoryMap";
 
 // Arrays with the fsc supported operators.
 // They are classified by their precedence.
@@ -59,6 +60,8 @@ const constantTable = new Map<number | string, number>();
 // Variable for counting the current temporal
 let tempCounter = 1;
 let argPointer = 0;
+
+const virtualAddresses = { ...memoryMap } as MemoryMap;
 
 class QuadruplesListener implements fsListener {
   enterMain(ctx: MainContext) {
@@ -102,6 +105,10 @@ class QuadruplesListener implements fsListener {
   }
 
   enterFunc(ctx: FuncContext) {
+    // Reset Virtual Addresses
+    virtualAddresses.Function = { ...memoryMap.Function };
+    virtualAddresses.Temporal = { ...memoryMap.Temporal };
+
     const funcName = ctx.start.text;
     const scope = new Scope(funcName, "Function", currentScope.top());
 
@@ -109,7 +116,7 @@ class QuadruplesListener implements fsListener {
       name: funcName,
       args: [],
       variables: new Map(),
-      tempVariables: [],
+      tempVariables: 0,
       type: "",
       startQuadruple: quadruples.length,
       returnVirtualAddress: 1000,
@@ -447,14 +454,8 @@ class QuadruplesListener implements fsListener {
     }
 
     const tempName = "T" + tempCounter++;
-    const variable = {
-      name: tempName,
-      type: oprResult,
-      virtualAddress: 1000,
-    };
 
-    if (scopeName === "Global") globalVariablesTable.set(tempName, variable);
-    else functionTable.get(scopeName).tempVariables.push(variable);
+    if (scopeName !== "Global") functionTable.get(scopeName).tempVariables++;
 
     quadruples.push([operator, operandOne, operandTwo, tempName]);
     operandsStack.push(tempName);
@@ -483,8 +484,7 @@ class QuadruplesListener implements fsListener {
       type: func.type,
       virtualAddress: 1000,
     };
-    if (scopeName === "Global") globalVariablesTable.set(temp, tempVariable);
-    else functionTable.get(scopeName).tempVariables.push(tempVariable);
+    if (scopeName !== "Global") functionTable.get(scopeName).tempVariables++;
   }
 
   exitMain(ctx: MainContext) {

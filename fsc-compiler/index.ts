@@ -108,7 +108,7 @@ const testThree = `
     two(2, 2)
 `;
 
-const chars = new ANTLRInputStream(testTwo);
+const chars = new ANTLRInputStream(testThree);
 const lexer = new fsLexer(chars);
 const tokens = new CommonTokenStream(lexer);
 const parser = new fsParser(tokens);

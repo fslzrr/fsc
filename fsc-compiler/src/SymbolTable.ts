@@ -29,7 +29,7 @@ export type Function = {
   name: string;
   args: Variable[];
   variables: Map<string, Variable>;
-  tempVariables: Variable[];
+  tempVariables: number;
   type: string;
   startQuadruple: number;
   returnVirtualAddress: number;
