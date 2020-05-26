@@ -35,7 +35,7 @@ export type Function = {
   returnVirtualAddress: number;
 };
 
-type ScopeType = "Global" | "Function" | "Conditional";
+type ScopeType = "Global" | "Function";
 
 export class Scope {
   scopeName: string;

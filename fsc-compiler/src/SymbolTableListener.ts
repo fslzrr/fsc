@@ -17,6 +17,7 @@ import {
   BlockContext,
   ParamContext,
   Func_callContext,
+  AssignationContext,
 } from "../lib/fsParser";
 import { Scope, Function, Variable } from "./SymbolTable";
 import {
@@ -27,6 +28,7 @@ import {
   getLiteralType,
   getValIDType,
   getExpressionType,
+  getVirtualAddress,
 } from "./utils";
 import { SemanticCubeTypes, SemanticCubeOperators } from "./SemanticCube";
 import { Stack } from "./Stack";
@@ -113,13 +115,24 @@ class QuadruplesListener implements fsListener {
     const isLiteral = ctx.literal();
     const isFuncCall = ctx.func_call();
 
-    if (isValID || isLiteral) {
-      operandsStack.push(ctx.text);
-      if (isValID) typesStack.push(getValIDType(scope, ctx.text));
-      else {
-        constantTable.set(ctx.literal().text, 1000);
-        typesStack.push(getLiteralType(isLiteral));
-      }
+    if (isValID) {
+      const varTable =
+        scopeName === "Global"
+          ? globalVariablesTable
+          : functionTable.get(scopeName).variables;
+      const variable = varTable.get(ctx.text);
+      operandsStack.push(String(variable.virtualAddress));
+      typesStack.push(variable.type);
+    } else if (isLiteral) {
+      const literal = ctx.literal().text;
+      const literalType = getLiteralType(isLiteral);
+      if (!constantTable.get(literal))
+        constantTable.set(
+          literal,
+          getVirtualAddress(literalType, "Constant", virtualAddresses)
+        );
+      operandsStack.push(String(constantTable.get(ctx.text)));
+      typesStack.push(literalType);
     }
 
     if (ctx.text[ctx.text.length - 1] === ")") {
@@ -227,10 +240,10 @@ class QuadruplesListener implements fsListener {
 
   // End linear expressions quadruple generation
 
-  exitVal_declaration(ctx: Val_declarationContext) {
+  enterAssignation(ctx: AssignationContext) {
     const scope = currentScope.top();
-    const name = ctx.VAL_ID().text;
-    const type = ctx.type_name().text;
+    const name = (ctx.parent as Val_declarationContext).VAL_ID().text;
+    const type = (ctx.parent as Val_declarationContext).type_name().text;
 
     isNameValid(currentScope.top(), name);
 
@@ -243,7 +256,32 @@ class QuadruplesListener implements fsListener {
       );
     }
 
+    const variable = {
+      name,
+      type,
+      virtualAddress: getVirtualAddress(
+        type,
+        scope.scopeType,
+        virtualAddresses
+      ),
+    };
+
+    if (scope.scopeName === "Global") globalVariablesTable.set(name, variable);
+    else functionTable.get(scope.scopeName).variables.set(name, variable);
+
+    // Insert variable to current scope
+    scope.varsMap.set(name, variable);
+  }
+
+  exitAssignation(ctx: AssignationContext) {
+    const variableName = (ctx.parent as Val_declarationContext).VAL_ID().text;
+    const scopeName = currentScope.top().scopeName;
     const expressionType = typesStack.pop();
+
+    const type =
+      scopeName === "Global"
+        ? globalVariablesTable.get(variableName).type
+        : functionTable.get(scopeName).variables.get(variableName).type;
 
     if (expressionType !== type) {
       console.error(
@@ -253,13 +291,6 @@ class QuadruplesListener implements fsListener {
         `Type mismatch in variable "${name}", expected "${type}" but got "${expressionType}"`
       );
     }
-    const variable = { name, type, virtualAddress: 1000 };
-
-    if (scope.scopeName === "Global") globalVariablesTable.set(name, variable);
-    else functionTable.get(scope.scopeName).variables.set(name, variable);
-
-    // Insert variable to current scope
-    scope.varsMap.set(name, variable);
   }
 
   enterFunc(ctx: FuncContext) {
@@ -287,7 +318,11 @@ class QuadruplesListener implements fsListener {
     const scope = currentScope.top();
     const name = ctx.VAL_ID().text;
     const type = ctx.type_name().text;
-    const variable = { name, type, virtualAddress: 1000 };
+    const variable = {
+      name,
+      type,
+      virtualAddress: getVirtualAddress(type, "Function", virtualAddresses),
+    };
 
     const funcName = scope.scopeName;
     const func = functionTable.get(funcName);
@@ -319,7 +354,7 @@ class QuadruplesListener implements fsListener {
     }
 
     // Add PARAM operation to quadruples
-    quadruples.push(["PARAM", operand, "", String(arg.virtualAddress)]);
+    quadruples.push(["PARAM", operand, "", arg.name]);
     argPointer++;
   }
 
@@ -350,7 +385,7 @@ class QuadruplesListener implements fsListener {
     // Insert new scope to scopes stack
     const scope = new Scope(
       currentScope.top().scopeName,
-      "Conditional",
+      "Function",
       currentScope.top()
     );
 
@@ -372,7 +407,7 @@ class QuadruplesListener implements fsListener {
     currentScope.pop();
     const scope = new Scope(
       currentScope.top().scopeName,
-      "Conditional",
+      "Function",
       currentScope.top()
     );
 
@@ -407,11 +442,16 @@ class QuadruplesListener implements fsListener {
       const expressionType = typesStack.pop();
 
       // Check if the return type is correct
-      if (expressionType !== functionTable.get(scopeName).type) {
+      const funcData = functionTable.get(scopeName);
+      if (expressionType !== funcData.type) {
         console.error("Incorrect return type in function");
         throw new Error("Incorrect return type in function");
       }
-
+      funcData.returnVirtualAddress = getVirtualAddress(
+        funcData.type,
+        "Global",
+        virtualAddresses
+      );
       // Add return quadruple
       quadruples.push(["RETURN", "", "", operand]);
     }
@@ -458,37 +498,58 @@ class QuadruplesListener implements fsListener {
       throw new Error("Type Error in Expression");
     }
 
-    const tempName = "T" + tempCounter++;
+    const tempVirtualAddress = getVirtualAddress(
+      oprResult,
+      "Temporal",
+      virtualAddresses
+    );
 
     if (scopeName !== "Global") functionTable.get(scopeName).tempVariables++;
 
-    quadruples.push([operator, operandOne, operandTwo, tempName]);
-    operandsStack.push(tempName);
+    quadruples.push([
+      operator,
+      operandOne,
+      operandTwo,
+      String(tempVirtualAddress),
+    ]);
+    operandsStack.push(String(tempVirtualAddress));
     typesStack.push(oprResult);
   }
 
   addAssignationQuadruple(ctx: Val_declarationContext) {
     const operator = oprStack.pop();
     const operandOne = operandsStack.pop();
-    const variable = ctx.VAL_ID().text;
+    const variableName = ctx.VAL_ID().text;
+    const scopeName = currentScope.top().scopeName;
 
-    quadruples.push([operator, operandOne, "", variable]);
+    const varVirtualAddress =
+      scopeName === "Global"
+        ? globalVariablesTable.get(variableName).virtualAddress
+        : functionTable.get(scopeName).variables.get(variableName)
+            .virtualAddress;
+
+    quadruples.push([operator, operandOne, "", String(varVirtualAddress)]);
   }
 
   addFunctionCallQuadruples(funcName: string) {
     const func = functionTable.get(funcName);
-    quadruples.push(["GOSUB", funcName, "", ""]);
-    const temp = "T" + tempCounter++;
-    quadruples.push(["=", funcName, "", temp]);
-    operandsStack.push(temp);
+    quadruples.push(["GOSUB", "", "", funcName]);
+    const tempVirtualAddress = getVirtualAddress(
+      func.type,
+      "Temporal",
+      virtualAddresses
+    );
+    quadruples.push([
+      "=",
+      String(func.returnVirtualAddress),
+      "",
+      String(tempVirtualAddress),
+    ]);
+    operandsStack.push(String(tempVirtualAddress));
     typesStack.push(func.type);
 
     const scopeName = currentScope.top().scopeName;
-    const tempVariable: Variable = {
-      name: temp,
-      type: func.type,
-      virtualAddress: 1000,
-    };
+
     if (scopeName !== "Global") functionTable.get(scopeName).tempVariables++;
   }
 

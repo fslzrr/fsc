@@ -108,7 +108,52 @@ const testThree = `
     two(2, 2)
 `;
 
-const chars = new ANTLRInputStream(testThree);
+const testFour = `
+    val list : [Int] = [5,2,3,6,1]
+
+    quickSort(list: [Int]) : [Int] -> {
+        if length(list) == 0 then {
+            []
+        } else {
+            val pivot = head(list)
+            val smaller : [Int] = smallerThan(pivot, list, [])
+            val higher : [Int] = greaterThan(pivot, list, [])
+            quickSort(smaller) ++ [pivot] ++ quickSort(higher)
+        }
+    }
+
+    smallerThan(pivot: Int, list: [Int], smallerList: [Int]) : [Int] -> {
+        val head : Int = head(list)
+        if (length(list) == 0) {
+            smallerList
+        } else if head <= pivot then {
+            smallerThan(pivot, tail(list), smallerList ++ [head])
+        } else {
+            smallerThan(pivot, tail(list), smallerList)
+        }
+    }
+
+    greaterThan(pivot: Int, list: [Int], biggerList: [Int]) : [Int] -> {
+        val head : Int = head(list)
+        if (length(list) == 0) {
+            biggerList
+        } else if head >= pivot then {
+            smallerThan(pivot, tail(list), biggerList ++ [head])
+        } else {
+            smallerThan(pivot, tail(list), biggerList)
+        }
+    }
+`;
+
+`
+    a = [1,2]
+    b = 3
+    c = [4,5]
+
+    a ++ [b] ++ c
+`;
+
+const chars = new ANTLRInputStream(testTwo);
 const lexer = new fsLexer(chars);
 const tokens = new CommonTokenStream(lexer);
 const parser = new fsParser(tokens);

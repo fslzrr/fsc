@@ -5,6 +5,8 @@ import {
   SemanticCubeOperators,
   SemanticCube,
 } from "./SemanticCube";
+import { MemoryMap } from "./memoryMap";
+import { primitives, Primitives } from "./fsc";
 
 export function isNameValid(scope: Scope, name: string) {
   if (scope.builtInTypes.has(name) || scope.userTypes.has(name)) {
@@ -74,4 +76,21 @@ export function getExpressionType(
   return type;
 }
 
-// export function getVirtualAddress(type: string, )
+function isPrimitive(type: string) {
+  return primitives.some((x) => x === type);
+}
+
+type VariableType = "Global" | "Function" | "Temporal" | "Constant";
+
+export function getVirtualAddress(
+  type: string,
+  variableType: VariableType,
+  memoryMap: MemoryMap
+) {
+  if (isPrimitive(type)) {
+    const virtualAddress = memoryMap[variableType][type as Primitives];
+    memoryMap[variableType][type as Primitives]++;
+    return virtualAddress;
+  }
+  return 1000;
+}

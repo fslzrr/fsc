@@ -30,9 +30,8 @@ literal : bool_literal |
 // Complex literals
 object_attribute : VAL_ID COLON expression;
 object_literal : OPEN_BRACKET object_attribute (COMMA object_attribute)* CLOSE_BRACKET;
-collection_elem : literal | VAL_ID;
 // tuple_literal : OPEN_PAREN collection_elem (COMMA collection_elem)* CLOSE_PAREN;
-list_literal : OPEN_SQUARE_BRACKET collection_elem (COMMA collection_elem)* CLOSE_SQUARE_BRACKET;
+list_literal : OPEN_SQUARE_BRACKET expression (COMMA expression)* CLOSE_SQUARE_BRACKET;
 func_literal : 
         OPEN_PAREN arg (COMMA arg)* CLOSE_PAREN COLON type_name ARROW block;
 

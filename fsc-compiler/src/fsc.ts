@@ -56,3 +56,7 @@ export const SymbolCodes = {
 export const getKeywords = () => {
   return Object.values(ReservedKeywords);
 };
+
+export const primitives = ["Int", "Float", "Boolean", "String"];
+
+export type Primitives = "Int" | "Float" | "Boolean" | "String";
