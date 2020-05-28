@@ -32,19 +32,19 @@ const memoryMap: MemoryMap = {
     Float: 7000,
     String: 8000,
   },
-  Function: {
+  Constant: {
     Int: 9000,
     Boolean: 10000,
     Float: 11000,
     String: 12000,
   },
-  Constant: {
+  Temporal: {
     Int: 13000,
     Boolean: 14000,
     Float: 15000,
     String: 16000,
   },
-  Temporal: {
+  Function: {
     Int: 17000,
     Boolean: 18000,
     Float: 19000,

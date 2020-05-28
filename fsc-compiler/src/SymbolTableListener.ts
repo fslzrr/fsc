@@ -18,6 +18,8 @@ import {
   ParamContext,
   Func_callContext,
   AssignationContext,
+  PrintContext,
+  ExecutionContext,
 } from "../lib/fsParser";
 import { Scope, Function, Variable } from "./SymbolTable";
 import {
@@ -29,11 +31,13 @@ import {
   getValIDType,
   getExpressionType,
   getVirtualAddress,
+  getVariable,
 } from "./utils";
 import { SemanticCubeTypes, SemanticCubeOperators } from "./SemanticCube";
 import { Stack } from "./Stack";
 import { ReservedKeywords, SymbolCodes, Operators } from "./fsc";
 import memoryMap, { MemoryMap } from "./memoryMap";
+import VirtualMachine from "./vm/vm";
 
 // Arrays with the fsc supported operators.
 // They are classified by their precedence.
@@ -60,7 +64,7 @@ const jumpsStack = new Stack<number>();
 // Map with the constants memory address
 const constantTable = new Map<number | string, number>();
 // Variable for counting the current temporal
-let tempCounter = 1;
+let foundFirstFunc = false;
 let argPointer = 0;
 
 const virtualAddresses = { ...memoryMap } as MemoryMap;
@@ -116,11 +120,7 @@ class QuadruplesListener implements fsListener {
     const isFuncCall = ctx.func_call();
 
     if (isValID) {
-      const varTable =
-        scopeName === "Global"
-          ? globalVariablesTable
-          : functionTable.get(scopeName).variables;
-      const variable = varTable.get(ctx.text);
+      const variable = getVariable(scope, ctx.text);
       operandsStack.push(String(variable.virtualAddress));
       typesStack.push(variable.type);
     } else if (isLiteral) {
@@ -236,6 +236,9 @@ class QuadruplesListener implements fsListener {
         throw new Error("Expression type must be boolean");
       }
     }
+
+    if (ctx.parent instanceof PrintContext)
+      quadruples.push(["print", "", "", operandsStack.pop()]);
   }
 
   // End linear expressions quadruple generation
@@ -294,6 +297,13 @@ class QuadruplesListener implements fsListener {
   }
 
   enterFunc(ctx: FuncContext) {
+    // Add the initial GOTO
+    if (!foundFirstFunc) {
+      jumpsStack.push(quadruples.length);
+      quadruples.push(["GOTO", "", "", ""]);
+      foundFirstFunc = true;
+    }
+
     // Reset Virtual Addresses
     virtualAddresses.Function = { ...memoryMap.Function };
     virtualAddresses.Temporal = { ...memoryMap.Temporal };
@@ -308,7 +318,7 @@ class QuadruplesListener implements fsListener {
       tempVariables: 0,
       type: "",
       startQuadruple: quadruples.length,
-      returnVirtualAddress: 1000,
+      returnVirtualAddress: -1,
     });
 
     currentScope.push(scope);
@@ -367,7 +377,7 @@ class QuadruplesListener implements fsListener {
 
   enterFunc_call(ctx: Func_callContext) {
     const funcName = ctx.start.text;
-    quadruples.push(["ERA", funcName, "", ""]);
+    quadruples.push(["ERA", "", "", funcName]);
   }
 
   exitType_declaration(ctx: Type_declarationContext) {
@@ -447,11 +457,10 @@ class QuadruplesListener implements fsListener {
         console.error("Incorrect return type in function");
         throw new Error("Incorrect return type in function");
       }
-      funcData.returnVirtualAddress = getVirtualAddress(
-        funcData.type,
-        "Global",
-        virtualAddresses
-      );
+      funcData.returnVirtualAddress =
+        funcData.returnVirtualAddress === -1
+          ? getVirtualAddress(funcData.type, "Global", virtualAddresses)
+          : funcData.returnVirtualAddress;
       // Add return quadruple
       quadruples.push(["RETURN", "", "", operand]);
     }
@@ -476,6 +485,11 @@ class QuadruplesListener implements fsListener {
         ctx.parent.children[ctx.parent.children.length - 1].text;
       functionTable.get(funcName).type = returnType;
     }
+  }
+
+  enterExecution(ctx: ExecutionContext) {
+    const jump = jumpsStack.length > 0 ? jumpsStack.pop() : undefined;
+    if (jump !== undefined) quadruples[jump][3] = String(quadruples.length);
   }
 
   // Adds a quadruple to the quadruple array, making sure that the operation is valid
@@ -555,14 +569,22 @@ class QuadruplesListener implements fsListener {
 
   exitMain(ctx: MainContext) {
     console.log("QUADRUPLES", quadruples);
-    console.log("OPERANDS", operandsStack);
-    console.log("OPERATORS", oprStack);
-    console.log("TYPES", typesStack);
-    console.log("Scope", currentScope);
-    console.log(constantTable);
-    console.log(globalVariablesTable);
-    console.log(functionTable);
-    debugger;
+    console.log("JUMPS", jumpsStack);
+    // console.log("OPERANDS", operandsStack);
+    // console.log("OPERATORS", oprStack);
+    // console.log("TYPES", typesStack);
+    // console.log("Scope", currentScope);
+    // console.log("Constant Table", constantTable);
+    // console.log("Global Variables Table", globalVariablesTable);
+    // console.log("Function Table", functionTable);
+
+    const vm = new VirtualMachine(
+      quadruples,
+      functionTable,
+      globalVariablesTable,
+      constantTable
+    );
+    vm.start();
   }
 }
 

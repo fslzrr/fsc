@@ -153,6 +153,39 @@ const testFour = `
     a ++ [b] ++ c
 `;
 
+const testFive = `
+    val i : Int = 5
+    val j : String = "HelloWorld"
+
+    test(a: Int, b: Int) : Int -> {
+        if a > b then {
+            a + b * i
+        } else {
+            a + b / i
+        }
+    }
+
+    isEven(x: Int) : Boolean -> {
+        if x % 2 == 0 then {
+            True
+        } else {
+            False
+        }
+    }
+
+    sum(x: Int) : Int -> {
+        if x == 0 then {
+            x
+        } else if isEven(x) then {
+            x + sum(x-1)
+        } else {
+            sum(x - 1)
+        }
+    }
+
+    print(sum(10))
+`;
+
 const chars = new ANTLRInputStream(testTwo);
 const lexer = new fsLexer(chars);
 const tokens = new CommonTokenStream(lexer);

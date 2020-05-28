@@ -2,8 +2,9 @@ grammar fs;
 
 // GRAMMAR
 
-main : type_declaration* val_declaration* func* expression* EOF;
+main : type_declaration* val_declaration* func* execution* EOF;
 
+execution: print | expression;
 // Types
 
 type_name : BOOLEAN | INT | FLOAT | CHAR | STRING | list_type | func_type | TYPE_ID;
@@ -41,7 +42,11 @@ val_declaration : VAL VAL_ID COLON type_name assignation;
 arg : VAL_ID COLON type_name;
 param: expression;
 func : VAL_ID OPEN_PAREN arg (COMMA arg)* CLOSE_PAREN COLON type_name ARROW block;
+print : PRINT OPEN_PAREN expression (COMMA expression)* CLOSE_PAREN;
 func_call : VAL_ID OPEN_PAREN param (COMMA param)* CLOSE_PAREN;
+length : LENGTH OPEN_PAREN expression CLOSE_PAREN;
+head : HEAD OPEN_PAREN expression CLOSE_PAREN;
+tail : TAIL OPEN_PAREN expression CLOSE_PAREN;
 
 binary_operators :  EQ | NOT_EQ | LOWER_THAN | GREATER_THAN | LOWER_THAN_OR_EQ | LOWER_THAN_OR_EQ;
 relational_operators : AND | OR;
@@ -59,7 +64,7 @@ else_expression : ELSE block;
 
 all_expressions : expression | if_expression;
 
-block : OPEN_BRACKET val_declaration* all_expressions CLOSE_BRACKET;
+block : OPEN_BRACKET val_declaration* print* all_expressions CLOSE_BRACKET;
 
 // Reserved words
 TYPE : 'type';
@@ -82,12 +87,16 @@ fragment UPPERCASE  : [A-Z] ;
 fragment NUMS : [0-9];
 
 // Literals
-INT_LITERAL : ('-')?NUMS+;
+INT_LITERAL : NUMS+;
 FLOAT_LITERAL : ('-')?NUMS+'.'NUMS+;
 CHAR_LITERAL : '\''(LOWERCASE | UPPERCASE)'\'';
-STR_LITERAL : '"'(NUMS | LOWERCASE | UPPERCASE)*'"';
+STR_LITERAL : '"'(NUMS | LOWERCASE | UPPERCASE | ' ' | '=')*'"';
 
 // Variable Names
+LENGTH : 'length';
+HEAD : 'head';
+TAIL : 'tail';
+PRINT : 'print';
 VAL_ID : LOWERCASE+(LOWERCASE | UPPERCASE)*;
 TYPE_ID : UPPERCASE+(LOWERCASE | UPPERCASE)*;
 WS : [ \r\t\n]+ -> skip ;
@@ -126,3 +135,6 @@ GREATER_THAN_OR_EQ : '>=';
 
 // Assignment
 ASSIGN_OP : '=';
+
+// Lists
+CONCATENATION : '++';

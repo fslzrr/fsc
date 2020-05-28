@@ -76,6 +76,13 @@ export function getExpressionType(
   return type;
 }
 
+export function getVariable(scope: Scope, variableName: string): Variable {
+  if (!scope) throw new Error("Variable not found");
+  const variable = scope.varsMap.get(variableName);
+  if (variable) return variable;
+  return getVariable(scope.enclosedScope, variableName);
+}
+
 function isPrimitive(type: string) {
   return primitives.some((x) => x === type);
 }
