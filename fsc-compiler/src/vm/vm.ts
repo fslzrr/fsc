@@ -2,6 +2,7 @@ import { getVariableTypeByAddress } from "./utils";
 import { Function, Variable } from "../SymbolTable";
 import { Stack } from "../Stack";
 
+// Instanciate the global memory
 const globalMemory = new Array(12000);
 
 class VirtualMachine {
@@ -34,8 +35,10 @@ class VirtualMachine {
     this.loadConstantsToMemory(this.constantTable);
   }
 
+  // Function to start the execution of the quadruples.
   start() {
     for (let i = 0; i < this.quadruples.length; i++) {
+      // Extract information from quadruple
       const quadruple = this.quadruples[i];
       const opr = quadruple[0];
       const operandOne = quadruple[1];
@@ -150,6 +153,7 @@ class VirtualMachine {
 
         case "GOTO": {
           const jump = quadruple[3];
+          if (jump === "") return;
           i = Number(jump) - 1;
           break;
         }
@@ -210,6 +214,7 @@ class VirtualMachine {
     }
   }
 
+  // This function loads every constant used in the program to memory.
   loadConstantsToMemory(constantTable: Map<number | string, number>) {
     constantTable.forEach((key, value) => {
       const type = getVariableTypeByAddress(key);
@@ -224,11 +229,14 @@ class VirtualMachine {
     });
   }
 
+  // Writes to memory located in address. If address >= 17000 it writes to the
+  // local memory. Otherwise it writes to global memory.
   writeMemory(address: number, value: any) {
     if (address >= 17000) this.callStack.top().memory[address - 17000] = value;
     else globalMemory[address - 5000] = value;
   }
 
+  // Read from memory located at address
   readMemory(address: number) {
     if (address >= 17000) return this.callStack.top().memory[address - 17000];
     return globalMemory[address - 5000];

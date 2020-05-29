@@ -306,7 +306,8 @@ class QuadruplesListener implements fsListener {
 
     // Reset Virtual Addresses
     virtualAddresses.Function = { ...memoryMap.Function };
-    virtualAddresses.Temporal = { ...memoryMap.Temporal };
+    virtualAddresses.GlobalTemporal = { ...memoryMap.GlobalTemporal };
+    virtualAddresses.FunctionTemporal = { ...memoryMap.FunctionTemporal };
 
     const funcName = ctx.start.text;
     const scope = new Scope(funcName, "Function", currentScope.top());
@@ -514,7 +515,7 @@ class QuadruplesListener implements fsListener {
 
     const tempVirtualAddress = getVirtualAddress(
       oprResult,
-      "Temporal",
+      scopeName === "Global" ? "GlobalTemporal" : "FunctionTemporal",
       virtualAddresses
     );
 
@@ -547,10 +548,11 @@ class QuadruplesListener implements fsListener {
 
   addFunctionCallQuadruples(funcName: string) {
     const func = functionTable.get(funcName);
+    const scopeName = currentScope.top().scopeName;
     quadruples.push(["GOSUB", "", "", funcName]);
     const tempVirtualAddress = getVirtualAddress(
       func.type,
-      "Temporal",
+      scopeName === "Global" ? "GlobalTemporal" : "FunctionTemporal",
       virtualAddresses
     );
     quadruples.push([
@@ -561,8 +563,6 @@ class QuadruplesListener implements fsListener {
     ]);
     operandsStack.push(String(tempVirtualAddress));
     typesStack.push(func.type);
-
-    const scopeName = currentScope.top().scopeName;
 
     if (scopeName !== "Global") functionTable.get(scopeName).tempVariables++;
   }

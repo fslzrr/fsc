@@ -81,6 +81,10 @@ const testTwo = `
         val j : Int = 20 * b
         i * j
     }
+    
+    print(one(5,10)))
+    print(two(10, 20))
+    print(one(5,10) * two(10, 20))
 `;
 
 const testThree = `
@@ -155,38 +159,30 @@ const testFour = `
 
 const testFive = `
     val i : Int = 5
-    val j : String = "HelloWorld"
+    val j : String = "Hello World"
 
-    test(a: Int, b: Int) : Int -> {
-        if a > b then {
-            a + b * i
-        } else {
-            a + b / i
-        }
-    }
-
-    isEven(x: Int) : Boolean -> {
-        if x % 2 == 0 then {
-            True
-        } else {
-            False
-        }
-    }
-
-    sum(x: Int) : Int -> {
+    fib(x: Int) : Int -> {
         if x == 0 then {
-            x
-        } else if isEven(x) then {
-            x + sum(x-1)
+            0
+        } else if x == 1 then {
+            1
         } else {
-            sum(x - 1)
+            fib(x - 1) + fib(x - 2)
         }
     }
 
-    print(sum(10))
+    fact(n: Int) : Int -> {
+        if n <= 1 then {
+            1
+        } else {
+            n * fact(n - 1)
+        }
+    }
+
+    print("Fact Answer", fact(i))
 `;
 
-const chars = new ANTLRInputStream(testTwo);
+const chars = new ANTLRInputStream(testFive);
 const lexer = new fsLexer(chars);
 const tokens = new CommonTokenStream(lexer);
 const parser = new fsParser(tokens);

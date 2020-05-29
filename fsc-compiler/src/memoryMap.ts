@@ -17,7 +17,13 @@ export type MemoryMap = {
     Float: number;
     String: number;
   };
-  Temporal: {
+  GlobalTemporal: {
+    Int: number;
+    Boolean: number;
+    Float: number;
+    String: number;
+  };
+  FunctionTemporal: {
     Int: number;
     Boolean: number;
     Float: number;
@@ -38,7 +44,7 @@ const memoryMap: MemoryMap = {
     Float: 11000,
     String: 12000,
   },
-  Temporal: {
+  GlobalTemporal: {
     Int: 13000,
     Boolean: 14000,
     Float: 15000,
@@ -49,6 +55,12 @@ const memoryMap: MemoryMap = {
     Boolean: 18000,
     Float: 19000,
     String: 20000,
+  },
+  FunctionTemporal: {
+    Int: 21000,
+    Boolean: 22000,
+    Float: 23000,
+    String: 24000,
   },
 } as const;
 

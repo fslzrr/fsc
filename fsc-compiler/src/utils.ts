@@ -87,7 +87,12 @@ function isPrimitive(type: string) {
   return primitives.some((x) => x === type);
 }
 
-type VariableType = "Global" | "Function" | "Temporal" | "Constant";
+type VariableType =
+  | "Global"
+  | "Function"
+  | "GlobalTemporal"
+  | "Constant"
+  | "FunctionTemporal";
 
 export function getVirtualAddress(
   type: string,
