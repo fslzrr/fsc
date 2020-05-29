@@ -215,9 +215,9 @@ class QuadruplesListener implements fsListener {
     }
   }
 
+  // If parent is assignation, add "=" to oprStack
   enterExpression(ctx: ExpressionContext) {
-    // Entered Assignation
-    if (ctx.parent.ruleContext.start.text === "=") {
+    if (ctx.parent instanceof AssignationContext) {
       oprStack.push("=");
     }
   }
@@ -243,6 +243,7 @@ class QuadruplesListener implements fsListener {
 
   // End linear expressions quadruple generation
 
+  // Check if the variable declared is not already declared
   enterAssignation(ctx: AssignationContext) {
     const scope = currentScope.top();
     const name = (ctx.parent as Val_declarationContext).VAL_ID().text;
@@ -259,6 +260,8 @@ class QuadruplesListener implements fsListener {
       );
     }
 
+    // Create variable and insert it to the current scope and the corresponding
+    // variable tables
     const variable = {
       name,
       type,
@@ -276,6 +279,7 @@ class QuadruplesListener implements fsListener {
     scope.varsMap.set(name, variable);
   }
 
+  // Check that the value assigned to variable is of the correct type
   exitAssignation(ctx: AssignationContext) {
     const variableName = (ctx.parent as Val_declarationContext).VAL_ID().text;
     const scopeName = currentScope.top().scopeName;
@@ -296,6 +300,8 @@ class QuadruplesListener implements fsListener {
     }
   }
 
+  // Add the initial GOTO to the quadruples, add function to function table
+  // and push a new Scope into the scopeStack
   enterFunc(ctx: FuncContext) {
     // Add the initial GOTO
     if (!foundFirstFunc) {
@@ -325,6 +331,7 @@ class QuadruplesListener implements fsListener {
     currentScope.push(scope);
   }
 
+  // Insert arguments to function variables table and to current scope.
   exitArg(ctx: ArgContext) {
     const scope = currentScope.top();
     const name = ctx.VAL_ID().text;
@@ -344,6 +351,8 @@ class QuadruplesListener implements fsListener {
     scope.varsMap.set(name, variable);
   }
 
+  // Checks if the function call has the correct amount of arguments and the types
+  // match with the function signature
   exitParam(ctx: ParamContext) {
     const funcName = (ctx.parent as Func_callContext).VAL_ID().text;
     const func = functionTable.get(funcName);
@@ -369,6 +378,7 @@ class QuadruplesListener implements fsListener {
     argPointer++;
   }
 
+  // Pop the current scope and add ENDFUNC quadruple
   exitFunc(ctx: FuncContext) {
     currentScope.pop();
 
@@ -376,11 +386,13 @@ class QuadruplesListener implements fsListener {
     quadruples.push(["ENDFUNC", "", "", ""]);
   }
 
+  // Add ERA quadruple
   enterFunc_call(ctx: Func_callContext) {
     const funcName = ctx.start.text;
     quadruples.push(["ERA", "", "", funcName]);
   }
 
+  // Create new User Type and added to userTypes table
   exitType_declaration(ctx: Type_declarationContext) {
     const scope = currentScope.top();
 
@@ -414,6 +426,7 @@ class QuadruplesListener implements fsListener {
     }
   }
 
+  // Remove the current scope and push a new one. Updates de GOTOF quadruple
   enterElse_expression(ctx: Else_expressionContext) {
     currentScope.pop();
     const scope = new Scope(
@@ -430,10 +443,13 @@ class QuadruplesListener implements fsListener {
     quadruple[3] = String(quadruples.length);
   }
 
+  // Pop current scope
   exitElse_expression(ctx: Else_expressionContext) {
     currentScope.pop();
   }
 
+  // If block of if expression, insert current quadruple count to JumpStack and add
+  // a GOTOF to quadruples
   enterBlock(ctx: BlockContext) {
     const parentChildren = ctx.parent.children;
     const then = parentChildren[2];
@@ -444,6 +460,7 @@ class QuadruplesListener implements fsListener {
     }
   }
 
+  // Check if return value type is correct and add RETURN quadruple
   exitBlock(ctx: BlockContext) {
     const returnExpression = ctx.all_expressions().expression();
     const scopeName = currentScope.top().scopeName;
@@ -488,6 +505,8 @@ class QuadruplesListener implements fsListener {
     }
   }
 
+  // When the executable part of the program is reached, update the initial
+  // GOTO jump
   enterExecution(ctx: ExecutionContext) {
     const jump = jumpsStack.length > 0 ? jumpsStack.pop() : undefined;
     if (jump !== undefined) quadruples[jump][3] = String(quadruples.length);
@@ -546,6 +565,8 @@ class QuadruplesListener implements fsListener {
     quadruples.push([operator, operandOne, "", String(varVirtualAddress)]);
   }
 
+  // Add the GOSUB quadruple and the quadruple for storing the return value
+  // in a temporal
   addFunctionCallQuadruples(funcName: string) {
     const func = functionTable.get(funcName);
     const scopeName = currentScope.top().scopeName;

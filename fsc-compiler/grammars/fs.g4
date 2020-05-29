@@ -19,8 +19,8 @@ list_type : OPEN_SQUARE_BRACKET type_name CLOSE_SQUARE_BRACKET;
 func_type : OPEN_PAREN type_name (ARROW type_name)+ CLOSE_PAREN;
 bool_literal : TRUE | FALSE;
 literal : bool_literal | 
-        INT_LITERAL | 
-        FLOAT_LITERAL | 
+        ('-')?INT_LITERAL | 
+        ('-')?FLOAT_LITERAL | 
         CHAR_LITERAL | 
         STR_LITERAL |
         object_literal |
@@ -88,9 +88,9 @@ fragment NUMS : [0-9];
 
 // Literals
 INT_LITERAL : NUMS+;
-FLOAT_LITERAL : ('-')?NUMS+'.'NUMS+;
+FLOAT_LITERAL : NUMS+'.'NUMS+;
 CHAR_LITERAL : '\''(LOWERCASE | UPPERCASE)'\'';
-STR_LITERAL : '"'(NUMS | LOWERCASE | UPPERCASE | ' ' | '=')*'"';
+STR_LITERAL : '"' (~'"')* '"';
 
 // Variable Names
 LENGTH : 'length';

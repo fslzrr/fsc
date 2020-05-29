@@ -158,11 +158,11 @@ const testFour = `
 `;
 
 const testFive = `
-    val i : Int = 5
+    val i : Int = -5
     val j : String = "Hello World"
 
     fib(x: Int) : Int -> {
-        if x == 0 then {
+        if x <= 0 then {
             0
         } else if x == 1 then {
             1
@@ -179,7 +179,7 @@ const testFive = `
         }
     }
 
-    print("Fact Answer", fact(i))
+    print("Fact Answer", fib(i))
 `;
 
 const chars = new ANTLRInputStream(testFive);
