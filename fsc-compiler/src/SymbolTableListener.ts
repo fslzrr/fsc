@@ -599,6 +599,7 @@ class QuadruplesListener implements fsListener {
     // console.log("Global Variables Table", globalVariablesTable);
     // console.log("Function Table", functionTable);
 
+    console.time("Execution time");
     const vm = new VirtualMachine(
       quadruples,
       functionTable,
@@ -606,6 +607,7 @@ class QuadruplesListener implements fsListener {
       constantTable
     );
     vm.start();
+    console.timeEnd("Execution time");
   }
 }
 

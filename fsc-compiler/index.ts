@@ -158,7 +158,7 @@ const testFour = `
 `;
 
 const testFive = `
-    val i : Int = -5
+    val i : Int = 10
     val j : String = "Hello World"
 
     fib(x: Int) : Int -> {
