@@ -18,6 +18,7 @@
     "antlr4ts": "^0.5.0-alpha.3"
   },
   "devDependencies": {
+    "@types/node": "^14.0.6",
     "antlr4ts-cli": "^0.5.0-alpha.3",
     "ts-node": "^8.10.2",
     "typescript": "^3.9.3"

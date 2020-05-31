@@ -1,4 +1,4 @@
-import { Scope, Variable } from "./SymbolTable";
+import { Scope, Variable, Function } from "./SymbolTable";
 import { Type_declarationContext, LiteralContext } from "../lib/fsParser";
 import {
   SemanticCubeTypes,
@@ -26,6 +26,13 @@ export function isVarDeclared(scope: Scope, varName: string): boolean {
   if (!scope) return false;
   if (scope.varsMap.has(varName)) return true;
   return isVarDeclared(scope.enclosedScope, varName);
+}
+
+export function isFunctionDeclared(
+  functionTable: Map<string, Function>,
+  funcName: string
+) {
+  return functionTable.has(funcName);
 }
 
 export function isTypeDeclared(scope: Scope, typeName: string): boolean {

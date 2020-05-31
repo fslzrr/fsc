@@ -1,0 +1,22 @@
+val global : Int = 10
+
+one (a: Int) : Int -> {
+    10
+}
+
+test(a: Int) : Boolean -> {
+    True
+}
+
+two (a: Int, b: Int) : Int -> {
+    val i : Int = one(a)
+    val j : Int = 20 * one(a)
+    if True && test(i) then {
+        i
+    } else {
+        val x : Int = 5
+        x
+    }
+}
+
+two(2, 2)

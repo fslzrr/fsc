@@ -27,7 +27,8 @@ export type Operators =
   | "&&"
   | "||"
   | "="
-  | "(";
+  | "("
+  | "!";
 
 export const SymbolCodes = {
   "*": 1,

@@ -6,7 +6,7 @@ import { Stack } from "../Stack";
 const globalMemory = new Array(12000);
 
 class VirtualMachine {
-  private quadruples: any[];
+  private quadruples: [string, string, string, string][];
   private functionTable: Map<string, Function>;
   private globalVariablesTable: Map<string, Variable>;
   private constantTable: Map<number | string, number>;
@@ -22,7 +22,7 @@ class VirtualMachine {
   };
 
   constructor(
-    quadruples: any[],
+    quadruples: [string, string, string, string][],
     functionTable: Map<string, Function>,
     globalVariablesTable: Map<string, Variable>,
     constantTable: Map<number | string, number>
@@ -39,13 +39,15 @@ class VirtualMachine {
   start() {
     for (let i = 0; i < this.quadruples.length; i++) {
       // Extract information from quadruple
-      const quadruple = this.quadruples[i];
-      const opr = quadruple[0];
-      const operandOne = quadruple[1];
-      const operandTwo = quadruple[2];
-      const assignTo = quadruple[3];
+      const [opr, operandOne, operandTwo, assignTo] = this.quadruples[i];
 
       switch (opr) {
+        case "!": {
+          const varOne = this.readMemory(Number(operandOne));
+          this.writeMemory(Number(assignTo), !varOne);
+          break;
+        }
+
         case "*": {
           const varOne = this.readMemory(Number(operandOne));
           const varTwo = this.readMemory(Number(operandTwo));
@@ -152,7 +154,7 @@ class VirtualMachine {
         }
 
         case "GOTO": {
-          const jump = quadruple[3];
+          const jump = assignTo;
           if (jump === "") return;
           i = Number(jump) - 1;
           break;
@@ -165,7 +167,7 @@ class VirtualMachine {
         }
 
         case "ERA": {
-          const functionName = quadruple[3];
+          const functionName = assignTo;
           this.nextCallStack = {
             functionName,
             memory: new Array(10000),
@@ -177,8 +179,8 @@ class VirtualMachine {
         case "PARAM": {
           const functionName = this.nextCallStack.functionName;
           const functionData = this.functionTable.get(functionName);
-          const valueAddress = Number(quadruple[1]);
-          const param = quadruple[3];
+          const valueAddress = Number(operandOne);
+          const param = assignTo;
 
           const paramAddress = functionData.variables.get(param).virtualAddress;
           this.nextCallStack.memory[paramAddress - 17000] = this.readMemory(
@@ -202,7 +204,7 @@ class VirtualMachine {
           const funcName = this.callStack.top().functionName;
           const functionData = this.functionTable.get(funcName);
           const returnAddress = functionData.returnVirtualAddress;
-          const returnValueAddress = Number(quadruple[3]);
+          const returnValueAddress = Number(assignTo);
           const value = this.readMemory(returnValueAddress);
           this.writeMemory(returnAddress, value);
           const currentCallStack = this.callStack.pop();
@@ -215,7 +217,7 @@ class VirtualMachine {
   }
 
   // This function loads every constant used in the program to memory.
-  loadConstantsToMemory(constantTable: Map<number | string, number>) {
+  private loadConstantsToMemory(constantTable: Map<number | string, number>) {
     constantTable.forEach((key, value) => {
       const type = getVariableTypeByAddress(key);
       if (type === "Int" || type === "Float")
@@ -231,13 +233,13 @@ class VirtualMachine {
 
   // Writes to memory located in address. If address >= 17000 it writes to the
   // local memory. Otherwise it writes to global memory.
-  writeMemory(address: number, value: any) {
+  private writeMemory(address: number, value: any) {
     if (address >= 17000) this.callStack.top().memory[address - 17000] = value;
     else globalMemory[address - 5000] = value;
   }
 
   // Read from memory located at address
-  readMemory(address: number) {
+  private readMemory(address: number) {
     if (address >= 17000) return this.callStack.top().memory[address - 17000];
     return globalMemory[address - 5000];
   }

@@ -1,0 +1,23 @@
+type Car = {
+    brand: String,
+    year: Int
+}
+
+type Person = {
+    name: String,
+    lastName: String,
+    age: Int,
+    car: Car
+}
+
+val p : Person = {
+    name: "Jorge",
+    lastName: "Iribe",
+    age: 21,
+    car: {
+        brand: Tesla,
+        year: 2012
+    }
+} 
+
+print(p.car.brand, p.car.year)

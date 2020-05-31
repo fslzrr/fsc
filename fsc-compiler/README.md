@@ -20,7 +20,15 @@ To run the program you have to follow these steps:
 # TO DO
 
 [] lists - F
-[] prelude (head, tail) - F
-[] validate less args in function call - J
+[] prelude (head, tail, print) - F
 [] error handling - J
+[] Errors in Virtual Machine. Stackoverflow, head/tail on empty list
+[] Throw error when accessing declared variable itself DONE
+[] Check that variables and functions cant have the same name DONE
+[] validate less args in function call - J DONE
+[] read from file - DONE
+[] ! operator DONE
+[] String in Semantic Cube DONE
+
 [] user types - ?
+[] Do not allow recursive types

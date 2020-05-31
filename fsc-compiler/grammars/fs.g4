@@ -51,8 +51,9 @@ tail : TAIL OPEN_PAREN expression CLOSE_PAREN;
 binary_operators :  EQ | NOT_EQ | LOWER_THAN | GREATER_THAN | LOWER_THAN_OR_EQ | LOWER_THAN_OR_EQ;
 relational_operators : AND | OR;
 
-factor : OPEN_PAREN expression CLOSE_PAREN | literal | VAL_ID | func_call;
-term : factor ((MULTIPLICATION | DIVISION | MODULE) factor)*;
+factor : OPEN_PAREN expression CLOSE_PAREN | literal | func_call | VAL_ID;
+unaryOpr : NOT? factor;
+term : unaryOpr ((MULTIPLICATION | DIVISION | MODULE) unaryOpr)*;
 exp : term ((SUM | SUBSTRACT) term)*;
 binary_expression : exp (binary_operators exp)*;
 expression : binary_expression (relational_operators binary_expression)*;
