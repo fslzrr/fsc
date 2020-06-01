@@ -1,0 +1,10 @@
+
+val a: Int = 1
+val b: Int = 2
+val c: Int = 3
+
+val x: [Int] = [1,a*b,3,4]
+val y: [Int] = [b+c, 6, a+b+c+1, 8]
+
+print("x: ", x, "y: ", y)
+

@@ -3,7 +3,7 @@ import { Function, Variable } from "../SymbolTable";
 import { Stack } from "../Stack";
 
 // Instanciate the global memory
-const globalMemory = new Array(12000);
+const globalMemory = new Array(14000);
 
 class VirtualMachine {
   private quadruples: [string, string, string, string][];
@@ -150,6 +150,17 @@ class VirtualMachine {
 
         case "print": {
           console.log(this.readMemory(Number(assignTo)));
+        }
+
+        case "head": {
+          break;
+        }
+
+        case "tail": {
+          break;
+        }
+
+        case "++": {
           break;
         }
 
@@ -234,13 +245,13 @@ class VirtualMachine {
   // Writes to memory located in address. If address >= 17000 it writes to the
   // local memory. Otherwise it writes to global memory.
   private writeMemory(address: number, value: any) {
-    if (address >= 17000) this.callStack.top().memory[address - 17000] = value;
+    if (address >= 20000) this.callStack.top().memory[address - 20000] = value;
     else globalMemory[address - 5000] = value;
   }
 
   // Read from memory located at address
   private readMemory(address: number) {
-    if (address >= 17000) return this.callStack.top().memory[address - 17000];
+    if (address >= 20000) return this.callStack.top().memory[address - 20000];
     return globalMemory[address - 5000];
   }
 }

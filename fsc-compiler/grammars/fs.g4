@@ -48,6 +48,7 @@ unaryOpr : NOT? factor;
 term : unaryOpr ((MULTIPLICATION | DIVISION | MODULE) unaryOpr)*;
 exp : term ((SUM | SUBSTRACT) term)*;
 binary_expression : exp (binary_operators exp)*;
+list_concat: factor (CONCATENATION factor)*;
 expression : binary_expression (relational_operators binary_expression)*;
 assignation: ASSIGN_OP expression;
 

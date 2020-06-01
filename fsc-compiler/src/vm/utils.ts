@@ -1,5 +1,5 @@
 export function getVariableTypeByAddress(address: number) {
-  const initialAddresses = [5000, 9000, 13000, 17000];
+  const initialAddresses = [5000, 10000, 15000, 20000];
   for (let i = 0; i < initialAddresses.length; i++) {
     let currentAddress = initialAddresses[i];
     if (address >= currentAddress && address < (currentAddress += 1000))
@@ -10,6 +10,8 @@ export function getVariableTypeByAddress(address: number) {
       return "Float";
     if (address >= currentAddress && address < (currentAddress += 1000))
       return "String";
+    if (address >= currentAddress && address < (currentAddress += 1000))
+      return "List";
   }
 
   return "Error";

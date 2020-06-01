@@ -63,13 +63,14 @@ export function extractObjectProperties(ctx: Type_declarationContext) {
 export function getLiteralType(
   ctx: LiteralContext,
   userTypes: Map<string, ObjectSymbol>,
-  objectAttributes: Variable[]
+  objectAttributes: Variable[],
+  enclosedType?: string
 ) {
   if (ctx.INT_LITERAL()) return "Int";
   if (ctx.FLOAT_LITERAL()) return "Float";
   if (ctx.STR_LITERAL()) return "String";
   if (ctx.bool_literal()) return "Boolean";
-  if (ctx.list_literal()) return ctx.list_literal().text;
+  if (ctx.list_literal()) return `${enclosedType}`;
   if (ctx.object_literal().text) {
     const type = getObjectLiteralType(userTypes, objectAttributes);
     return type || ctx.object_literal().text;
@@ -119,7 +120,7 @@ export function getVariable(scope: Scope, variableName: string): Variable {
   return getVariable(scope.enclosedScope, variableName);
 }
 
-function isPrimitive(type: string) {
+function isPrimitive(type: string): boolean {
   return primitives.some((x) => x === type);
 }
 
@@ -140,5 +141,26 @@ export function getVirtualAddress(
     memoryMap[variableType][type as Primitives]++;
     return virtualAddress;
   }
+  if (isList(type)) {
+    const virtualAddress = memoryMap[variableType]["List"];
+    memoryMap[variableType]["List"]++;
+    return virtualAddress;
+  }
   return 1000;
+}
+
+export function isList(listType: string): boolean {
+  const p = isPrimitive(listType);
+  if (p) return false;
+  const t = listType.slice(1, -1); //  [Int] -> Int
+  return isPrimitive(t) || isList(listType);
+}
+
+export function getNestedType(listType: string) {
+  return listType.slice(1, -1);
+}
+
+export function getPrimitiveType(listType: string): string {
+  const t = listType.slice(1, -1);
+  return isPrimitive(t) ? t : getPrimitiveType(t);
 }

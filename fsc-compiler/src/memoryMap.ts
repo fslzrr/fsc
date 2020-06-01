@@ -4,30 +4,35 @@ export type MemoryMap = {
     Boolean: number;
     Float: number;
     String: number;
+    List: number;
   };
   Function: {
     Int: number;
     Boolean: number;
     Float: number;
     String: number;
+    List: number;
   };
   Constant: {
     Int: number;
     Boolean: number;
     Float: number;
     String: number;
+    List: number;
   };
   GlobalTemporal: {
     Int: number;
     Boolean: number;
     Float: number;
     String: number;
+    List: number;
   };
   FunctionTemporal: {
     Int: number;
     Boolean: number;
     Float: number;
     String: number;
+    List: number;
   };
 };
 
@@ -37,30 +42,35 @@ const memoryMap: MemoryMap = {
     Boolean: 6000,
     Float: 7000,
     String: 8000,
+    List: 9000,
   },
   Constant: {
-    Int: 9000,
-    Boolean: 10000,
-    Float: 11000,
-    String: 12000,
+    Int: 10000,
+    Boolean: 11000,
+    Float: 12000,
+    String: 13000,
+    List: 14000,
   },
   GlobalTemporal: {
-    Int: 13000,
-    Boolean: 14000,
-    Float: 15000,
-    String: 16000,
+    Int: 15000,
+    Boolean: 16000,
+    Float: 17000,
+    String: 18000,
+    List: 19000,
   },
   Function: {
-    Int: 17000,
-    Boolean: 18000,
-    Float: 19000,
-    String: 20000,
+    Int: 20000,
+    Boolean: 21000,
+    Float: 22000,
+    String: 23000,
+    List: 24000,
   },
   FunctionTemporal: {
-    Int: 21000,
-    Boolean: 22000,
-    Float: 23000,
-    String: 24000,
+    Int: 25000,
+    Boolean: 26000,
+    Float: 27000,
+    String: 28000,
+    List: 29000,
   },
 } as const;
 

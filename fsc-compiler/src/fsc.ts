@@ -36,7 +36,9 @@ export type Operators =
   | "||"
   | "="
   | "("
-  | "!";
+  | "!"
+  | "++"
+  | "node";
 
 export const SymbolCodes = {
   "*": 1,
@@ -60,6 +62,10 @@ export const SymbolCodes = {
   ENDFUNC: 19,
   PARAM: 20,
   ERA: 21,
+  LIST: 22,
+  NODE: 23,
+  HEAD: 24,
+  TAIL: 25,
 };
 
 export const getKeywords = () => {
@@ -68,4 +74,4 @@ export const getKeywords = () => {
 
 export const primitives = ["Int", "Float", "Boolean", "String"];
 
-export type Primitives = "Int" | "Float" | "Boolean" | "String";
+export type Primitives = "Int" | "Float" | "Boolean" | "String" | "List";

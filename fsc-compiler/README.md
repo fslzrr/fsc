@@ -23,12 +23,12 @@ To run the program you have to follow these steps:
 [] prelude (head, tail, print) - F
 [] error handling - J
 [] Errors in Virtual Machine. Stackoverflow, head/tail on empty list
-[] Throw error when accessing declared variable itself DONE
-[] Check that variables and functions cant have the same name DONE
-[] validate less args in function call - J DONE
-[] read from file - DONE
-[] ! operator DONE
-[] String in Semantic Cube DONE
+[x] Throw error when accessing declared variable itself
+[x] Check that variables and functions cant have the same name
+[x] validate less args in function call
+[x] read from file
+[x] ! operator
+[x] String in Semantic Cube
 
 [] user types - ?
 [] Do not allow recursive types

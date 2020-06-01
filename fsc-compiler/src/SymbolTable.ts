@@ -8,6 +8,7 @@ export type Variable = {
   type: string;
   virtualAddress: number;
   nestedVariables: Map<string, Variable>;
+  values?: Variable[];
 };
 
 export type Function = {
