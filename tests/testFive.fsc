@@ -1,4 +1,4 @@
-val i : Int = 20
+val i1 : Int = 20
 val j : String = "Hello World"
 
 fib(x: Int) : Int -> {
@@ -19,4 +19,4 @@ fact(n: Int) : Int -> {
     }
 }
 
-print("Fib Answer", fib(i))
+print("Fib Answer", fib(i1))

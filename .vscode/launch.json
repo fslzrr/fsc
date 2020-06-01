@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "configurations": [
+    {
+      "name": "Debug ANTLR4 grammar",
+      "type": "antlr-debug",
+      "request": "launch",
+      "input": "tests/testSix.fsc",
+      "grammar": "fsc-compiler/grammars/fs.g4",
+      "startRule": "main",
+      "printParseTree": true,
+      "visualParseTree": true
+    }
+  ]
+}

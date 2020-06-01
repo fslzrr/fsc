@@ -22,8 +22,10 @@ import {
   ExecutionContext,
   Object_literalContext,
   UnaryOprContext,
+  Object_attributeContext,
+  Object_accessContext,
 } from "../lib/fsParser";
-import { Scope, Function, Variable } from "./SymbolTable";
+import { Scope, Function, Variable, ObjectSymbol } from "./SymbolTable";
 import {
   isNameValid,
   isVarDeclared,
@@ -38,7 +40,7 @@ import {
 } from "./utils";
 import { SemanticCubeTypes, SemanticCubeOperators } from "./SemanticCube";
 import { Stack } from "./Stack";
-import { ReservedKeywords, SymbolCodes, Operators } from "./fsc";
+import { ReservedKeywords, SymbolCodes, Operators, primitives } from "./fsc";
 import memoryMap, { MemoryMap } from "./memoryMap";
 import VirtualMachine from "./vm/vm";
 
@@ -51,6 +53,7 @@ const relationalOperators = ["&&", "||"];
 
 const functionTable = new Map<string, Function>();
 const globalVariablesTable = new Map<string, Variable>();
+const userTypes = new Map<string, ObjectSymbol>();
 
 // Stack containing the scopes of the program
 const currentScope = new Stack<Scope>();
@@ -69,6 +72,10 @@ const constantTable = new Map<number | string, number>();
 let foundFirstFunc = false;
 let argPointer = 0;
 let currentVarName = "";
+
+const objectsStack = new Stack<Variable[]>();
+// const objectAccessStack = new Stack<Variable>();
+// const objectAccessTypeStack = new Stack<string>();
 
 const virtualAddresses = { ...memoryMap } as MemoryMap;
 
@@ -131,14 +138,19 @@ class QuadruplesListener implements fsListener {
       typesStack.push(variable.type);
     } else if (isLiteral) {
       const literal = ctx.literal().text;
-      const literalType = getLiteralType(isLiteral);
+      const literalType = getLiteralType(
+        isLiteral,
+        userTypes,
+        objectsStack.length > 0 ? objectsStack.top() : []
+      );
       if (!constantTable.get(literal))
         constantTable.set(
           literal,
           getVirtualAddress(literalType, "Constant", virtualAddresses)
         );
-      operandsStack.push(String(constantTable.get(ctx.text)));
+      operandsStack.push(String(constantTable.get(ctx.text) || isValID.text));
       typesStack.push(literalType);
+      if (primitives.every((x) => x !== literalType)) objectsStack.pop();
     }
 
     if (ctx.text[ctx.text.length - 1] === ")") {
@@ -150,25 +162,7 @@ class QuadruplesListener implements fsListener {
       argPointer = 0;
     }
 
-    if (oprStack.top() === "!") {
-      oprStack.pop();
-      const operand = operandsStack.pop();
-      const type = typesStack.pop();
-
-      if (type !== "Boolean") {
-        throw new Error("Type Error in Expression");
-      }
-
-      const tempVirtualAddress = getVirtualAddress(
-        "Boolean",
-        scopeName === "Global" ? "GlobalTemporal" : "FunctionTemporal",
-        virtualAddresses
-      );
-      if (scopeName !== "Global") functionTable.get(scopeName).tempVariables++;
-      quadruples.push(["!", operand, "", String(tempVirtualAddress)]);
-      operandsStack.push(String(tempVirtualAddress));
-      typesStack.push("Boolean");
-    }
+    if (oprStack.top() === "!") this.addNotQuadruple();
   }
 
   enterUnaryOpr(ctx: UnaryOprContext) {
@@ -259,16 +253,12 @@ class QuadruplesListener implements fsListener {
   }
 
   exitExpression(ctx: ExpressionContext) {
-    if (oprStack.top() === "=") {
-      this.addAssignationQuadruple(ctx.parent.parent as Val_declarationContext);
-    }
-
     // Check if if expression is of Boolean type
     if (ctx.parent instanceof If_expressionContext) {
       const type = typesStack.pop();
       operandsStack.pop();
       if (type !== "Boolean") {
-        throw new Error("Expression type must be boolean");
+        throw new Error("Expression type must be Boolean");
       }
     }
 
@@ -285,7 +275,7 @@ class QuadruplesListener implements fsListener {
     const type = (ctx.parent as Val_declarationContext).type_name().text;
     currentVarName = name;
 
-    isNameValid(currentScope.top(), name);
+    isNameValid(name, userTypes);
 
     if (scope.varsMap.has(name)) {
       throw new Error(
@@ -303,6 +293,7 @@ class QuadruplesListener implements fsListener {
         scope.scopeType,
         virtualAddresses
       ),
+      nestedVariables: new Map(),
     };
 
     if (scope.scopeName === "Global") globalVariablesTable.set(name, variable);
@@ -327,6 +318,12 @@ class QuadruplesListener implements fsListener {
       throw new Error(
         `Type mismatch in variable "${variableName}", expected "${type}" but got "${expressionType}"`
       );
+    }
+
+    if (oprStack.top() === "=") {
+      primitives.some((x) => x === expressionType)
+        ? this.addAssignationQuadruple(ctx.parent as Val_declarationContext)
+        : oprStack.pop();
     }
 
     currentVarName = "";
@@ -378,6 +375,7 @@ class QuadruplesListener implements fsListener {
       name,
       type,
       virtualAddress: getVirtualAddress(type, "Function", virtualAddresses),
+      nestedVariables: new Map(),
     };
 
     const funcName = scope.scopeName;
@@ -398,7 +396,7 @@ class QuadruplesListener implements fsListener {
     // Check if the amount of arguments is correct
     if (func.args.length === 0) {
       console.log("Too many arguments in function");
-      throw new Error("Too many arguments in function");
+      throw new Error(`Too many arguments in function ${funcName} call.`);
     }
 
     const arg = func.args[argPointer];
@@ -407,7 +405,9 @@ class QuadruplesListener implements fsListener {
 
     // Check if argument type is correct
     if (argType !== arg.type) {
-      throw new Error("Type Mismatch in Args");
+      throw new Error(
+        `Type Mismatch in argument "${arg.name}", expected "${arg.type}" but got "${argType}"`
+      );
     }
 
     // Add PARAM operation to quadruples
@@ -441,14 +441,15 @@ class QuadruplesListener implements fsListener {
 
   // Create new User Type and added to userTypes table
   exitType_declaration(ctx: Type_declarationContext) {
-    const scope = currentScope.top();
-
     const name = ctx.TYPE_ID().text;
     const properties = extractObjectProperties(ctx);
 
-    isNameValid(scope, name);
+    isNameValid(name, userTypes);
 
-    scope.userTypes.set(name, { name, properties: new Set(properties) });
+    userTypes.set(name, {
+      name,
+      properties: new Map(properties.map((x) => [x.name, x])),
+    });
   }
 
   enterIf_expression(ctx: If_expressionContext) {
@@ -533,11 +534,7 @@ class QuadruplesListener implements fsListener {
   exitType_name(ctx: Type_nameContext) {
     // Check if type used exists
     const name = ctx.text;
-    if (
-      !ctx.list_type() &&
-      !ctx.func_type() &&
-      !isTypeDeclared(currentScope.top(), name)
-    ) {
+    if (!ctx.list_type() && !isTypeDeclared(name, userTypes)) {
       throw new Error(`Type "${name}" is not declared`);
     }
 
@@ -549,6 +546,105 @@ class QuadruplesListener implements fsListener {
       functionTable.get(funcName).type = returnType;
     }
   }
+
+  // Insert variable to current object
+  // enterObject_attribute(ctx: Object_attributeContext) {
+  //   const variable = {
+  //     name: ctx.start.text,
+  //     type: null,
+  //     virtualAddress: -1,
+  //     nestedVariables: new Map(),
+  //   } as Variable;
+  //   objectsStack.top().push(variable);
+  // }
+
+  // exitObject_attribute(ctx: Object_attributeContext) {
+  //   const scopeType = currentScope.top().scopeType;
+  //   const currentObject = objectsStack.top();
+  //   const currentObjectAttribute = currentObject[currentObject.length - 1];
+  //   const type = typesStack.pop();
+  //   const value = operandsStack.pop();
+  //   currentObjectAttribute.type = type;
+  //   if (primitives.some((x) => x === type)) {
+  //     const virtualAddress = getVirtualAddress(
+  //       type,
+  //       scopeType,
+  //       virtualAddresses
+  //     );
+  //     quadruples.push(["=", value, "", String(virtualAddress)]);
+  //     currentObjectAttribute.virtualAddress = virtualAddress;
+  //   }
+  // }
+
+  // enterObject_literal(ctx: Object_literalContext) {
+  //   objectsStack.push([]);
+  // }
+
+  // exitObject_literal(ctx: Object_literalContext) {
+  //   const nestedVariables = objectsStack.top();
+  //   if (objectsStack.length === 1) {
+  //     const scope = currentScope.top();
+  //     const nestedVariablesMap = new Map(
+  //       nestedVariables.map((x) => [x.name, x])
+  //     );
+  //     scope.varsMap.get(currentVarName).nestedVariables = nestedVariablesMap;
+  //     if (scope.scopeType === "Global")
+  //       globalVariablesTable.get(
+  //         currentVarName
+  //       ).nestedVariables = nestedVariablesMap;
+  //     else
+  //       functionTable
+  //         .get(scope.scopeName)
+  //         .variables.get(currentVarName).nestedVariables = nestedVariablesMap;
+  //   } else {
+  //     const popped = objectsStack.pop();
+  //     const currentObject = objectsStack.top();
+  //     objectsStack.push(popped);
+  //     const currentObjectAttribute = currentObject[currentObject.length - 1];
+  //     currentObjectAttribute.nestedVariables = new Map(
+  //       nestedVariables.map((x) => [x.name, x])
+  //     );
+  //   }
+  // }
+
+  // exitObject_access(ctx: Object_accessContext) {
+  //   const variables = ctx.VAL_ID().map((x) => x.text);
+  //   const start = getVariable(currentScope.top(), variables.shift());
+  //   const f = (variable: Variable, nestedVariables: string[]): Variable => {
+  //     if (nestedVariables.length === 0) return variable;
+  //     const nestedVarName = nestedVariables.shift();
+  //     const nestedVariable = variable.nestedVariables.get(nestedVarName);
+  //     if (!nestedVariable)
+  //       throw new Error(
+  //         `Property "${variable.name}" does not have value "${nestedVarName}"`
+  //       );
+  //     return f(nestedVariable, nestedVariables);
+  //   };
+  //   const res = f(start, variables);
+  //   if (primitives.some((x) => x === res.type))
+  //     operandsStack.push(String(res.virtualAddress));
+  //   else operandsStack.push(res.name);
+  //   typesStack.push(res.type);
+  // }
+
+  // enterObject_access(ctx: Object_accessContext) {
+  //   const scope = currentScope.top();
+  //   const variable = scope.varsMap.get(ctx.start.text);
+  //   objectAccessStack.push(variable);
+  // }
+
+  // exitObject_access(ctx: Object_accessContext) {
+  //   const value = objectAccessStack.top();
+  //   const type = objectAccessTypeStack.top();
+  //   console.log(value, type);
+  // }
+
+  // enterNested_object_access(ctx: Nested_object_accessContext) {
+  //   const value = objectAccessStack.top();
+  //   const type = objectAccessTypeStack.top();
+  //   console.log(value, type);
+  //   value.nestedVariables.get(ctx.)
+  // }
 
   // When the executable part of the program is reached, update the initial
   // GOTO jump
@@ -594,6 +690,27 @@ class QuadruplesListener implements fsListener {
     typesStack.push(oprResult);
   }
 
+  addNotQuadruple() {
+    oprStack.pop();
+    const operand = operandsStack.pop();
+    const type = typesStack.pop();
+    const scopeName = currentScope.top().scopeName;
+
+    if (type !== "Boolean") {
+      throw new Error("Type Error in Expression");
+    }
+
+    const tempVirtualAddress = getVirtualAddress(
+      "Boolean",
+      scopeName === "Global" ? "GlobalTemporal" : "FunctionTemporal",
+      virtualAddresses
+    );
+    if (scopeName !== "Global") functionTable.get(scopeName).tempVariables++;
+    quadruples.push(["!", operand, "", String(tempVirtualAddress)]);
+    operandsStack.push(String(tempVirtualAddress));
+    typesStack.push("Boolean");
+  }
+
   addAssignationQuadruple(ctx: Val_declarationContext) {
     const operator = oprStack.pop();
     const operandOne = operandsStack.pop();
@@ -634,11 +751,15 @@ class QuadruplesListener implements fsListener {
 
   exitMain(ctx: MainContext) {
     console.log("QUADRUPLES", quadruples);
+    // console.log("User Types", userTypes);
     // console.log("JUMPS", jumpsStack);
-    // console.log("OPERANDS", operandsStack);
-    // console.log("OPERATORS", oprStack);
-    // console.log("TYPES", typesStack);
-    // console.log("Scope", currentScope);
+    console.log("OPERANDS", operandsStack);
+    console.log("OPERATORS", oprStack);
+    console.log("TYPES", typesStack);
+    // console.log(
+    //   "Scope",
+    //   currentScope.top().varsMap.get("person").nestedVariables
+    // );
     // console.log("Constant Table", constantTable);
     // console.log("Global Variables Table", globalVariablesTable);
     // console.log("Function Table", functionTable);

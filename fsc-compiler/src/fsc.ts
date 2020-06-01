@@ -12,6 +12,14 @@ export const ReservedKeywords = {
   STRING: "String",
 };
 
+export const builtInTypes = new Set([
+  "Int",
+  "String",
+  "Char",
+  "Float",
+  "Boolean",
+]);
+
 export type Operators =
   | "*"
   | "/"

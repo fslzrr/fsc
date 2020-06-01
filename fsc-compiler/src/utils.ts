@@ -1,20 +1,27 @@
-import { Scope, Variable, Function } from "./SymbolTable";
-import { Type_declarationContext, LiteralContext } from "../lib/fsParser";
+import { Scope, Variable, Function, ObjectSymbol } from "./SymbolTable";
+import {
+  Type_declarationContext,
+  LiteralContext,
+  Object_literalContext,
+} from "../lib/fsParser";
 import {
   SemanticCubeTypes,
   SemanticCubeOperators,
   SemanticCube,
 } from "./SemanticCube";
 import { MemoryMap } from "./memoryMap";
-import { primitives, Primitives } from "./fsc";
+import { primitives, Primitives, builtInTypes, getKeywords } from "./fsc";
 
-export function isNameValid(scope: Scope, name: string) {
-  if (scope.builtInTypes.has(name) || scope.userTypes.has(name)) {
+export function isNameValid(
+  name: string,
+  userTypes: Map<string, ObjectSymbol>
+) {
+  if (builtInTypes.has(name) || userTypes.has(name)) {
     console.error(`Type ${name} is already declared`);
     throw new Error(`Type ${name} is already declared`);
   }
 
-  if (scope.reservedKeywords.has(name)) {
+  if (getKeywords().some((x) => x === name)) {
     console.error(`${name} is a reserved keyword`);
     throw new Error(`${name} is a reserved keyword`);
   }
@@ -34,9 +41,11 @@ export function isFunctionDeclared(
 ) {
   return functionTable.has(funcName);
 }
-
-export function isTypeDeclared(scope: Scope, typeName: string): boolean {
-  return scope.builtInTypes.has(typeName) || scope.userTypes.has(typeName);
+export function isTypeDeclared(
+  typeName: string,
+  userTypes: Map<string, ObjectSymbol>
+): boolean {
+  return builtInTypes.has(typeName) || userTypes.has(typeName);
 }
 
 export function extractObjectProperties(ctx: Type_declarationContext) {
@@ -51,19 +60,39 @@ export function extractObjectProperties(ctx: Type_declarationContext) {
     });
 }
 
-export function getLiteralType(ctx: LiteralContext) {
+export function getLiteralType(
+  ctx: LiteralContext,
+  userTypes: Map<string, ObjectSymbol>,
+  objectAttributes: Variable[]
+) {
   if (ctx.INT_LITERAL()) return "Int";
   if (ctx.FLOAT_LITERAL()) return "Float";
   if (ctx.STR_LITERAL()) return "String";
   if (ctx.bool_literal()) return "Boolean";
-  if (ctx.CHAR_LITERAL()) return "Char";
-  if (ctx.func_literal()) return ctx.func_literal().text;
   if (ctx.list_literal()) return ctx.list_literal().text;
-  if (ctx.object_literal().text) return ctx.object_literal().text;
+  if (ctx.object_literal().text) {
+    const type = getObjectLiteralType(userTypes, objectAttributes);
+    return type || ctx.object_literal().text;
+  }
   return "NULL";
 }
 
+function getObjectLiteralType(
+  userTypes: Map<string, ObjectSymbol>,
+  objectAttributes: Variable[]
+) {
+  const type = Array.from(userTypes).find(
+    ([name, object]) =>
+      objectAttributes.every((x) => {
+        const typeProperty = object.properties.get(x.name);
+        return typeProperty && typeProperty.type === x.type;
+      }) && objectAttributes.length === object.properties.size
+  );
+  return type ? type[0] : null;
+}
+
 export function getValIDType(scope: Scope, valID: string): string {
+  if (!scope) return null;
   const valIDRef = scope.varsMap.get(valID);
   if (valIDRef) return valIDRef.type;
   return getValIDType(scope.enclosedScope, valID);

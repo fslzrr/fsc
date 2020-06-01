@@ -7,34 +7,26 @@ main : type_declaration* val_declaration* func* execution* EOF;
 execution: print | expression;
 // Types
 
-type_name : BOOLEAN | INT | FLOAT | CHAR | STRING | list_type | func_type | TYPE_ID;
+type_name : BOOLEAN | INT | FLOAT | STRING | list_type | TYPE_ID;
 
 object_property : VAL_ID COLON type_name;
 object_type : OPEN_BRACKET object_property (COMMA object_property)* CLOSE_BRACKET;
 
-// tuple_type : OPEN_PAREN type_name (COMMA type_name)* CLOSE_PAREN;
-
 list_type : OPEN_SQUARE_BRACKET type_name CLOSE_SQUARE_BRACKET;
 
-func_type : OPEN_PAREN type_name (ARROW type_name)+ CLOSE_PAREN;
 bool_literal : TRUE | FALSE;
 literal : bool_literal | 
         ('-')?INT_LITERAL | 
         ('-')?FLOAT_LITERAL | 
-        CHAR_LITERAL | 
         STR_LITERAL |
         object_literal |
-        // tuple_literal |
-        list_literal |
-        func_literal;
+        list_literal;
 
 // Complex literals
 object_attribute : VAL_ID COLON expression;
 object_literal : OPEN_BRACKET object_attribute (COMMA object_attribute)* CLOSE_BRACKET;
-// tuple_literal : OPEN_PAREN collection_elem (COMMA collection_elem)* CLOSE_PAREN;
+object_access : VAL_ID ('.' VAL_ID)+;
 list_literal : OPEN_SQUARE_BRACKET expression (COMMA expression)* CLOSE_SQUARE_BRACKET;
-func_literal : 
-        OPEN_PAREN arg (COMMA arg)* CLOSE_PAREN COLON type_name ARROW block;
 
 // Declarations
 type_declaration : TYPE TYPE_ID ASSIGN_OP object_type;
@@ -51,7 +43,7 @@ tail : TAIL OPEN_PAREN expression CLOSE_PAREN;
 binary_operators :  EQ | NOT_EQ | LOWER_THAN | GREATER_THAN | LOWER_THAN_OR_EQ | LOWER_THAN_OR_EQ;
 relational_operators : AND | OR;
 
-factor : OPEN_PAREN expression CLOSE_PAREN | literal | func_call | VAL_ID;
+factor : OPEN_PAREN expression CLOSE_PAREN | literal | func_call | object_access | VAL_ID;
 unaryOpr : NOT? factor;
 term : unaryOpr ((MULTIPLICATION | DIVISION | MODULE) unaryOpr)*;
 exp : term ((SUM | SUBSTRACT) term)*;
@@ -80,7 +72,6 @@ FALSE : 'False';
 BOOLEAN : 'Boolean';
 INT : 'Int';
 FLOAT : 'Float';
-CHAR : 'Char';
 STRING : 'String';
 
 fragment LOWERCASE  : [a-z] ;
@@ -90,7 +81,6 @@ fragment NUMS : [0-9];
 // Literals
 INT_LITERAL : NUMS+;
 FLOAT_LITERAL : NUMS+'.'NUMS+;
-CHAR_LITERAL : '\''(LOWERCASE | UPPERCASE)'\'';
 STR_LITERAL : '"' (~'"')* '"';
 
 // Variable Names
@@ -98,8 +88,8 @@ LENGTH : 'length';
 HEAD : 'head';
 TAIL : 'tail';
 PRINT : 'print';
-VAL_ID : LOWERCASE+(LOWERCASE | UPPERCASE)*;
-TYPE_ID : UPPERCASE+(LOWERCASE | UPPERCASE)*;
+VAL_ID : LOWERCASE+(LOWERCASE | UPPERCASE | NUMS)*;
+TYPE_ID : UPPERCASE+(LOWERCASE | UPPERCASE | NUMS)*;
 WS : [ \r\t\n]+ -> skip ;
 
 // Symbols

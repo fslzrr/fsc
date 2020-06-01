@@ -10,14 +10,14 @@ type Person = {
     car: Car
 }
 
-val p : Person = {
+val person : Person = {
     name: "Jorge",
     lastName: "Iribe",
     age: 21,
     car: {
-        brand: Tesla,
+        brand: "Tesla",
         year: 2012
     }
-} 
-
-print(p.car.brand, p.car.year)
+}
+val car : Car = person.car
+print(car.brand)

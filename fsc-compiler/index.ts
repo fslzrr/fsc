@@ -1,9 +1,14 @@
-import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
+import {
+  ANTLRInputStream,
+  CommonTokenStream,
+  DiagnosticErrorListener,
+} from "antlr4ts";
 import { fsLexer } from "./lib/fsLexer";
 import { fsParser } from "./lib/fsParser";
 import SymbolTableListener from "./src/SymbolTableListener";
 import { fsListener } from "./lib/fsListener";
 import * as fs from "fs";
+import { PredictionMode } from "antlr4ts/atn/PredictionMode";
 
 const pathToFile = process.argv[2];
 
@@ -21,7 +26,8 @@ fs.readFile(pathToFile, (err, data) => {
   parser.removeParseListeners();
   parser.addParseListener(symbolTableListener);
   // parser.removeErrorListeners();
-  // parser.addErrorListener(errorListener);
+  // parser.addErrorListener(new DiagnosticErrorListener());
+  // parser.interpreter.setPredictionMode(PredictionMode.LL_EXACT_AMBIG_DETECTION);
 
   try {
     parser.main();
