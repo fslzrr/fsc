@@ -150,6 +150,7 @@ class VirtualMachine {
 
         case "print": {
           console.log(this.readMemory(Number(assignTo)));
+          break;
         }
 
         case "head": {
@@ -192,9 +193,8 @@ class VirtualMachine {
           const functionData = this.functionTable.get(functionName);
           const valueAddress = Number(operandOne);
           const param = assignTo;
-
           const paramAddress = functionData.variables.get(param).virtualAddress;
-          this.nextCallStack.memory[paramAddress - 17000] = this.readMemory(
+          this.nextCallStack.memory[paramAddress - 20000] = this.readMemory(
             valueAddress
           );
           break;
