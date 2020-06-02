@@ -27,6 +27,7 @@ import {
   HeadContext,
   TailContext,
   PreludeContext,
+  LengthContext,
 } from "../lib/fsParser";
 import { Scope, Function, Variable, ObjectSymbol } from "./SymbolTable";
 import {
@@ -845,10 +846,46 @@ class QuadruplesListener implements fsListener {
   }
 
   handlePrelude(ctx: PreludeContext) {
+    const isLength = ctx.length();
     const isHead = ctx.head();
     const isTail = ctx.tail();
+    if (isLength) this.handleLength(isLength);
     if (isHead) this.handleHead(isHead);
     if (isTail) this.handleTail(isTail);
+  }
+
+  handleLength(ctx: LengthContext) {
+    operandsStack.pop();
+    const type = typesStack.pop();
+    if (!isList(type))
+      throw new Error("Error: length() only receives a list as parameter.");
+
+    const listName = ctx.expression().text;
+    const scope = currentScope.top();
+
+    const variable = scope.varsMap.get(listName);
+    const length = variable.values ? variable.values.length : 0;
+    const lengthLiteral = String(length);
+
+    if (!constantTable.get(lengthLiteral))
+      constantTable.set(
+        lengthLiteral,
+        getVirtualAddress("Int", "Constant", virtualAddresses)
+      );
+
+    const tempVirtualAddress = getVirtualAddress(
+      "Int",
+      scope.scopeName === "Global" ? "GlobalTemporal" : "FunctionTemporal",
+      virtualAddresses
+    );
+
+    const constVirtualAddress = constantTable.get(lengthLiteral);
+
+    const address = String(constVirtualAddress);
+    operandsStack.push(String(tempVirtualAddress));
+    operandsStack.push(address);
+    typesStack.push("Int");
+    oprStack.push("=");
   }
 
   handleHead(ctx: HeadContext) {
@@ -882,31 +919,28 @@ class QuadruplesListener implements fsListener {
   }
 
   handleTail(ctx: TailContext) {
-    operandsStack.pop();
-    const type = typesStack.pop();
-    if (!isList(type))
-      throw new Error("Error: tail() only receives a list as parameter.");
-
-    const listName = ctx.expression().text;
-    const scope = currentScope.top();
-    const variable = scope.varsMap.get(listName);
-    if (!variable.values || variable.values.length === 0)
-      throw new Error("Error: tail() list received is empty");
-
-    const head = variable.values[0];
-    const tempVirtualAddress = getVirtualAddress(
-      head.type,
-      scope.scopeName === "Global" ? "GlobalTemporal" : "FunctionTemporal",
-      virtualAddresses
-    );
-
-    if (scope.scopeName !== "Global")
-      functionTable.get(scope.scopeName).tempVariables++;
-    const headVA = String(head.virtualAddress);
-    operandsStack.push(String(tempVirtualAddress));
-    operandsStack.push(headVA);
-    typesStack.push(head.type);
-    oprStack.push("=");
+    // operandsStack.pop();
+    // const type = typesStack.pop();
+    // if (!isList(type))
+    //   throw new Error("Error: tail() only receives a list as parameter.");
+    // const listName = ctx.expression().text;
+    // const scope = currentScope.top();
+    // const variable = scope.varsMap.get(listName);
+    // if (!variable.values || variable.values.length === 0)
+    //   throw new Error("Error: tail() list received is empty");
+    // const head = variable.values[0];
+    // const tempVirtualAddress = getVirtualAddress(
+    //   head.type,
+    //   scope.scopeName === "Global" ? "GlobalTemporal" : "FunctionTemporal",
+    //   virtualAddresses
+    // );
+    // if (scope.scopeName !== "Global")
+    //   functionTable.get(scope.scopeName).tempVariables++;
+    // const headVA = String(head.virtualAddress);
+    // operandsStack.push(String(tempVirtualAddress));
+    // operandsStack.push(headVA);
+    // typesStack.push(head.type);
+    // oprStack.push("=");
   }
 
   exitMain(ctx: MainContext) {
