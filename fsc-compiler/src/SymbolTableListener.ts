@@ -26,6 +26,7 @@ import {
   List_literalContext,
   HeadContext,
   TailContext,
+  PreludeContext,
 } from "../lib/fsParser";
 import { Scope, Function, Variable, ObjectSymbol } from "./SymbolTable";
 import {
@@ -139,11 +140,13 @@ class QuadruplesListener implements fsListener {
     const isLiteral = ctx.literal();
     const isFuncCall = ctx.func_call();
 
+    const isPrelude = ctx.prelude();
+    if (isPrelude) this.handlePrelude(isPrelude);
+
     if (isValID) {
       const variable = getVariable(scope, ctx.text);
       operandsStack.push(String(variable.virtualAddress));
       typesStack.push(variable.type);
-      debugger;
       if (isList(variable.type)) {
         operandsForListMap.set(String(variable.virtualAddress), variable);
       }
@@ -165,7 +168,6 @@ class QuadruplesListener implements fsListener {
         const operand = String(constantTable.get(ctx.text) || isValID.text);
         operandsStack.push(operand);
         typesStack.push(literalType);
-        debugger;
         if (primitives.every((x) => x !== literalType)) objectsStack.pop();
       }
     }
@@ -277,37 +279,26 @@ class QuadruplesListener implements fsListener {
     if (ctx.parent instanceof If_expressionContext) {
       const type = typesStack.pop();
       operandsStack.pop();
-      debugger;
       if (type !== "Boolean") {
         throw new Error("Expression type must be Boolean");
       }
     }
 
     if (ctx.parent instanceof List_literalContext) {
-      // TODO: this.addTemporalListVariable
       this.addTemporalListElementVariable(ctx);
     }
 
-    if (ctx.parent instanceof HeadContext) {
-      // TODO: handle
-      console.log("HeadContext", ctx.parent.text);
-    }
-    if (ctx.parent instanceof TailContext) {
-      // TODO: handle
-    }
     if (ctx.parent instanceof PrintContext) {
       const operand = operandsStack.pop();
       typesStack.pop();
-      debugger;
       const operandVariable = operandsForListMap.get(operand);
-      if (operandVariable) {
+      if (operandVariable && operandVariable.values) {
         operandVariable.values.forEach((v) => {
           quadruples.push(["print", "", "", String(v.virtualAddress)]);
         });
         operandsForListMap.delete(operand);
-      } else {
+      } else if (!operandVariable) {
         quadruples.push(["print", "", "", operand]);
-        debugger;
       }
     }
   }
@@ -348,7 +339,6 @@ class QuadruplesListener implements fsListener {
       listsOrderStack.push(name);
       operandsStack.push(String(virtualAddress));
       typesStack.push(type);
-      debugger;
     }
 
     if (scope.scopeName === "Global") globalVariablesTable.set(name, variable);
@@ -457,7 +447,6 @@ class QuadruplesListener implements fsListener {
     const arg = func.args[argPointer];
     const operand = operandsStack.pop();
     const argType = typesStack.pop();
-    debugger;
 
     // Check if argument type is correct
     if (argType !== arg.type) {
@@ -572,7 +561,6 @@ class QuadruplesListener implements fsListener {
     if (returnExpression) {
       const operand = operandsStack.pop();
       const expressionType = typesStack.pop();
-      debugger;
 
       // Check if the return type is correct
       const funcData = functionTable.get(scopeName);
@@ -719,7 +707,6 @@ class QuadruplesListener implements fsListener {
     const operandOne = operandsStack.pop();
     const operandOneType = typesStack.pop() as SemanticCubeTypes;
 
-    debugger;
     const oprResult = getExpressionType(
       operandOneType,
       operandTwoType,
@@ -746,7 +733,6 @@ class QuadruplesListener implements fsListener {
     ]);
     operandsStack.push(String(tempVirtualAddress));
     typesStack.push(oprResult);
-    debugger;
   }
 
   addNotQuadruple() {
@@ -775,7 +761,6 @@ class QuadruplesListener implements fsListener {
     const operandOne = operandsStack.pop();
     const variableName = ctx.VAL_ID().text;
     const scopeName = currentScope.top().scopeName;
-    debugger;
 
     const varVirtualAddress =
       scopeName === "Global"
@@ -805,7 +790,6 @@ class QuadruplesListener implements fsListener {
     ]);
     operandsStack.push(String(tempVirtualAddress));
     typesStack.push(func.type);
-    debugger;
 
     if (scopeName !== "Global") functionTable.get(scopeName).tempVariables++;
   }
@@ -822,7 +806,7 @@ class QuadruplesListener implements fsListener {
 
     const type = typesStack.pop();
     const virtualAddress = Number(operandsStack.pop());
-    debugger;
+
     const variable: Variable = {
       name: `${ownerListName}-${listsElementsTemporalCounter++}`,
       type,
@@ -860,22 +844,72 @@ class QuadruplesListener implements fsListener {
     scope.varsMap.set(ownerListName, updatedOwnerList);
   }
 
+  handlePrelude(ctx: PreludeContext) {
+    const isHead = ctx.head();
+    const isTail = ctx.tail();
+    if (isHead) this.handleHead(isHead);
+    if (isTail) this.handleTail(isTail);
+  }
+
+  handleHead(ctx: HeadContext) {
+    operandsStack.pop();
+    const type = typesStack.pop();
+    if (!isList(type))
+      throw new Error("Error: head() only receives a list as parameter.");
+
+    const listName = ctx.expression().text;
+    const scope = currentScope.top();
+
+    const variable = scope.varsMap.get(listName);
+    if (!variable.values || variable.values.length === 0)
+      throw new Error("Error: head() list received is empty");
+
+    const head = variable.values[0];
+    const tempVirtualAddress = getVirtualAddress(
+      head.type,
+      scope.scopeName === "Global" ? "GlobalTemporal" : "FunctionTemporal",
+      virtualAddresses
+    );
+
+    if (scope.scopeName !== "Global")
+      functionTable.get(scope.scopeName).tempVariables++;
+
+    const headVA = String(head.virtualAddress);
+    operandsStack.push(String(tempVirtualAddress));
+    operandsStack.push(headVA);
+    typesStack.push(head.type);
+    oprStack.push("=");
+  }
+
+  handleTail(ctx: TailContext) {
+    operandsStack.pop();
+    const type = typesStack.pop();
+    if (!isList(type))
+      throw new Error("Error: tail() only receives a list as parameter.");
+
+    const listName = ctx.expression().text;
+    const scope = currentScope.top();
+    const variable = scope.varsMap.get(listName);
+    if (!variable.values || variable.values.length === 0)
+      throw new Error("Error: tail() list received is empty");
+
+    const head = variable.values[0];
+    const tempVirtualAddress = getVirtualAddress(
+      head.type,
+      scope.scopeName === "Global" ? "GlobalTemporal" : "FunctionTemporal",
+      virtualAddresses
+    );
+
+    if (scope.scopeName !== "Global")
+      functionTable.get(scope.scopeName).tempVariables++;
+    const headVA = String(head.virtualAddress);
+    operandsStack.push(String(tempVirtualAddress));
+    operandsStack.push(headVA);
+    typesStack.push(head.type);
+    oprStack.push("=");
+  }
+
   exitMain(ctx: MainContext) {
-    console.log("QUADRUPLES", quadruples);
-    console.log("JUMPS", jumpsStack);
-    console.log("OPERANDS", operandsStack);
-    console.log("OPERATORS", oprStack);
-    console.log("TYPES", typesStack);
-    console.log("Scope", currentScope);
-    console.log("Constant Table", constantTable);
-    console.log("Global Variables Table", globalVariablesTable);
-    console.log("Function Table", functionTable);
-
-    console.log("Global Variables Table X", globalVariablesTable.get("x"));
-    console.log("Function Variables Table test", functionTable.get("test"));
-
-    debugger;
-
     console.time("Execution time");
     const vm = new VirtualMachine(
       quadruples,

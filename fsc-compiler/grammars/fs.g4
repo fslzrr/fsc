@@ -26,7 +26,7 @@ literal : bool_literal |
 object_attribute : VAL_ID COLON expression;
 object_literal : OPEN_BRACKET object_attribute (COMMA object_attribute)* CLOSE_BRACKET;
 object_access : VAL_ID ('.' VAL_ID)+;
-list_literal : OPEN_SQUARE_BRACKET expression (COMMA expression)* CLOSE_SQUARE_BRACKET;
+list_literal : OPEN_SQUARE_BRACKET (expression (COMMA expression)*)? CLOSE_SQUARE_BRACKET;
 
 // Declarations
 type_declaration : TYPE TYPE_ID ASSIGN_OP object_type;
