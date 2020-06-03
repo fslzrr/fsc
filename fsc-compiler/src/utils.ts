@@ -1,9 +1,5 @@
 import { Scope, Variable, Function, ObjectSymbol } from "./SymbolTable";
-import {
-  Type_declarationContext,
-  LiteralContext,
-  Object_literalContext,
-} from "../lib/fsParser";
+import { LiteralContext } from "../lib/fsParser";
 import {
   SemanticCubeTypes,
   SemanticCubeOperators,
@@ -12,6 +8,7 @@ import {
 import { MemoryMap } from "./memoryMap";
 import { primitives, Primitives, builtInTypes, getKeywords } from "./fsc";
 
+// Check if the name given to a type or variable is valid
 export function isNameValid(
   name: string,
   userTypes: Map<string, ObjectSymbol>
@@ -29,6 +26,7 @@ export function isNameValid(
   return true;
 }
 
+// Checks if variable with name "varName" is declared
 export function isVarDeclared(scope: Scope, varName: string): boolean {
   if (!scope) return false;
   if (scope.varsMap.has(varName)) return true;
@@ -48,50 +46,17 @@ export function isTypeDeclared(
   return builtInTypes.has(typeName) || userTypes.has(typeName);
 }
 
-export function extractObjectProperties(ctx: Type_declarationContext) {
-  return ctx
-    .object_type()
-    .object_property()
-    .map((property) => {
-      const name = property.VAL_ID().text;
-      const type = property.type_name().text;
-
-      return { name, type } as Variable;
-    });
-}
-
-export function getLiteralType(
-  ctx: LiteralContext,
-  userTypes: Map<string, ObjectSymbol>,
-  objectAttributes: Variable[],
-  enclosedType?: string
-) {
+// Get the type of a Literal Context
+export function getLiteralType(ctx: LiteralContext, enclosedType?: string) {
   if (ctx.INT_LITERAL()) return "Int";
   if (ctx.FLOAT_LITERAL()) return "Float";
   if (ctx.STR_LITERAL()) return "String";
   if (ctx.bool_literal()) return "Boolean";
   if (ctx.list_literal()) return `${enclosedType}`;
-  if (ctx.object_literal().text) {
-    const type = getObjectLiteralType(userTypes, objectAttributes);
-    return type || ctx.object_literal().text;
-  }
   return "NULL";
 }
 
-function getObjectLiteralType(
-  userTypes: Map<string, ObjectSymbol>,
-  objectAttributes: Variable[]
-) {
-  const type = Array.from(userTypes).find(
-    ([name, object]) =>
-      objectAttributes.every((x) => {
-        const typeProperty = object.properties.get(x.name);
-        return typeProperty && typeProperty.type === x.type;
-      }) && objectAttributes.length === object.properties.size
-  );
-  return type ? type[0] : null;
-}
-
+// Get the type of a given variable ID
 export function getValIDType(scope: Scope, valID: string): string {
   if (!scope) return null;
   const valIDRef = scope.varsMap.get(valID);
@@ -99,6 +64,7 @@ export function getValIDType(scope: Scope, valID: string): string {
   return getValIDType(scope.enclosedScope, valID);
 }
 
+// Returns the expression type according to the Semantic Cube
 export function getExpressionType(
   operandOneType: SemanticCubeTypes,
   operandTwoType: SemanticCubeTypes,
@@ -113,13 +79,16 @@ export function getExpressionType(
   return type;
 }
 
+// Searches "variableName" declaration
 export function getVariable(scope: Scope, variableName: string): Variable {
-  if (!scope) throw new Error("Variable not found");
+  if (!scope)
+    throw new Error(`Trying to access undeclared variable "${variableName}"`);
   const variable = scope.varsMap.get(variableName);
   if (variable) return variable;
   return getVariable(scope.enclosedScope, variableName);
 }
 
+// Checks if given type is a priitive
 function isPrimitive(type: string): boolean {
   return primitives.some((x) => x === type);
 }
@@ -131,6 +100,7 @@ type VariableType =
   | "Constant"
   | "FunctionTemporal";
 
+// Returns the next virtual address given the Variable type and scope
 export function getVirtualAddress(
   type: string,
   variableType: VariableType,

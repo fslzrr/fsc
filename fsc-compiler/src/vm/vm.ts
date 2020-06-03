@@ -35,121 +35,122 @@ class VirtualMachine {
     this.loadConstantsToMemory(this.constantTable);
   }
 
-  // Function to start the execution of the quadruples.
+  // Function to start the execution of the quadruples. Depending on the code, execute an action
   start() {
     for (let i = 0; i < this.quadruples.length; i++) {
       // Extract information from quadruple
       const [opr, operandOne, operandTwo, assignTo] = this.quadruples[i];
+      const memoryType = this.callStack.length > 0 ? "local" : "global";
 
       switch (opr) {
         case "!": {
-          const varOne = this.readMemory(Number(operandOne));
-          this.writeMemory(Number(assignTo), !varOne);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          this.writeMemory(Number(assignTo), !varOne, memoryType);
           break;
         }
 
         case "*": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne * varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne * varTwo, memoryType);
           break;
         }
 
         case "/": {
           const isInt = getVariableTypeByAddress(Number(operandOne)) === "Int";
           const initialResult =
-            this.readMemory(Number(operandOne)) /
-            this.readMemory(Number(operandTwo));
+            this.readMemory(Number(operandOne), memoryType) /
+            this.readMemory(Number(operandTwo), memoryType);
           const result = isInt ? Math.floor(initialResult) : initialResult;
-          this.writeMemory(Number(assignTo), result);
+          this.writeMemory(Number(assignTo), result, memoryType);
           break;
         }
 
         case "%": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne % varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne % varTwo, memoryType);
           break;
         }
 
         case "+": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne + varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne + varTwo, memoryType);
           break;
         }
 
         case "-": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne - varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne - varTwo, memoryType);
           break;
         }
 
         case "<": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne < varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne < varTwo, memoryType);
           break;
         }
 
         case ">": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne > varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne > varTwo, memoryType);
           break;
         }
 
         case "<=": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne <= varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne <= varTwo, memoryType);
           break;
         }
 
         case ">=": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne >= varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne >= varTwo, memoryType);
           break;
         }
 
         case "==": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne === varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne === varTwo, memoryType);
           break;
         }
 
         case "!=": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne !== varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne !== varTwo, memoryType);
           break;
         }
 
         case "&&": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne && varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne && varTwo, memoryType);
           break;
         }
 
         case "||": {
-          const varOne = this.readMemory(Number(operandOne));
-          const varTwo = this.readMemory(Number(operandTwo));
-          this.writeMemory(Number(assignTo), varOne || varTwo);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          const varTwo = this.readMemory(Number(operandTwo), memoryType);
+          this.writeMemory(Number(assignTo), varOne || varTwo, memoryType);
           break;
         }
 
         case "=": {
-          const varOne = this.readMemory(Number(operandOne));
-          this.writeMemory(Number(assignTo), varOne);
+          const varOne = this.readMemory(Number(operandOne), memoryType);
+          this.writeMemory(Number(assignTo), varOne, memoryType);
           break;
         }
 
         case "print": {
-          console.log(this.readMemory(Number(assignTo)));
+          console.log(this.readMemory(Number(assignTo), memoryType));
           break;
         }
 
@@ -173,7 +174,7 @@ class VirtualMachine {
         }
 
         case "GOTOF": {
-          const res = this.readMemory(Number(operandOne));
+          const res = this.readMemory(Number(operandOne), memoryType);
           if (!res) i = Number(assignTo) - 1;
           break;
         }
@@ -182,7 +183,7 @@ class VirtualMachine {
           const functionName = assignTo;
           this.nextCallStack = {
             functionName,
-            memory: new Array(10000),
+            memory: new Array(9000),
             lastQuadrupleIndex: 0,
           };
           break;
@@ -195,7 +196,8 @@ class VirtualMachine {
           const param = assignTo;
           const paramAddress = functionData.variables.get(param).virtualAddress;
           this.nextCallStack.memory[paramAddress - 20000] = this.readMemory(
-            valueAddress
+            valueAddress,
+            memoryType
           );
           break;
         }
@@ -216,8 +218,8 @@ class VirtualMachine {
           const functionData = this.functionTable.get(funcName);
           const returnAddress = functionData.returnVirtualAddress;
           const returnValueAddress = Number(assignTo);
-          const value = this.readMemory(returnValueAddress);
-          this.writeMemory(returnAddress, value);
+          const value = this.readMemory(returnValueAddress, memoryType);
+          this.writeMemory(returnAddress, value, memoryType);
           const currentCallStack = this.callStack.pop();
           const restoredQuadrupleIndex = currentCallStack.lastQuadrupleIndex;
           i = restoredQuadrupleIndex - 1;
@@ -240,19 +242,38 @@ class VirtualMachine {
           String(value).length - 1
         );
     });
+    this.constantTable = new Map();
   }
 
   // Writes to memory located in address. If address >= 17000 it writes to the
   // local memory. Otherwise it writes to global memory.
-  private writeMemory(address: number, value: any) {
+  private writeMemory(
+    address: number,
+    value: any,
+    memoryType: "global" | "local"
+  ) {
+    this.isValidMemoryAddress(address, memoryType);
     if (address >= 20000) this.callStack.top().memory[address - 20000] = value;
     else globalMemory[address - 5000] = value;
   }
 
   // Read from memory located at address
-  private readMemory(address: number) {
+  private readMemory(address: number, memoryType: "global" | "local") {
+    this.isValidMemoryAddress(address, memoryType);
     if (address >= 20000) return this.callStack.top().memory[address - 20000];
     return globalMemory[address - 5000];
+  }
+
+  // Check if the memory address trying to access is valid
+  private isValidMemoryAddress(
+    address: number,
+    memoryType: "global" | "local"
+  ) {
+    const invalidGlobalMemory =
+      memoryType === "global" && (address < 5000 || address >= 20000);
+    const invalidLocalMemory = memoryType === "local" && address >= 30000;
+    if (invalidGlobalMemory || invalidLocalMemory)
+      throw new Error("Invalid memory address");
   }
 }
 

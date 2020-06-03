@@ -4,7 +4,6 @@ import {
   FuncContext,
   Val_declarationContext,
   ArgContext,
-  Type_declarationContext,
   If_expressionContext,
   Else_if_expressionContext,
   Else_expressionContext,
@@ -21,8 +20,6 @@ import {
   PrintContext,
   ExecutionContext,
   UnaryOprContext,
-  Object_attributeContext,
-  Object_accessContext,
   List_literalContext,
   HeadContext,
   TailContext,
@@ -34,18 +31,16 @@ import {
   isNameValid,
   isVarDeclared,
   isTypeDeclared,
-  extractObjectProperties,
   getLiteralType,
   getExpressionType,
   getVirtualAddress,
   getVariable,
   isFunctionDeclared,
   isList,
-  getNestedType,
 } from "./utils";
 import { SemanticCubeTypes, SemanticCubeOperators } from "./SemanticCube";
 import { Stack } from "./Stack";
-import { ReservedKeywords, SymbolCodes, Operators, primitives } from "./fsc";
+import { ReservedKeywords, Operators, primitives } from "./fsc";
 import memoryMap, { MemoryMap } from "./memoryMap";
 import VirtualMachine from "./vm/vm";
 
@@ -82,13 +77,10 @@ let foundFirstFunc = false;
 let argPointer = 0;
 let currentVarName = "";
 
-const objectsStack = new Stack<Variable[]>();
-// const objectAccessStack = new Stack<Variable>();
-// const objectAccessTypeStack = new Stack<string>();
-
 const virtualAddresses = { ...memoryMap } as MemoryMap;
 
 class QuadruplesListener implements fsListener {
+  // Insert main scope to scopeStack
   enterMain(ctx: MainContext) {
     const scope = new Scope("Global", "Global", undefined);
     currentScope.push(scope);
@@ -117,24 +109,30 @@ class QuadruplesListener implements fsListener {
     const scopeName = scope.scopeName;
     const isValID = ctx.VAL_ID();
 
+    // Check if the variable trying to access is declared
     if (isValID) {
       if (!isVarDeclared(scope, ctx.text)) {
+        console.error(`Undeclared variable "${isValID.text}"`);
         throw new Error(`Undeclared variable "${isValID.text}"`);
       }
       if (isValID.text === currentVarName) {
+        console.error(
+          `Accessing variable "${isValID.text}" before declaration.`
+        );
         throw new Error(
           `Accessing variable "${isValID.text}" before declaration.`
         );
       }
     }
 
+    // Check if the function trying to call is declared
     if (
       ctx.func_call() &&
       scopeName !== "Global" &&
       !functionTable.has(scopeName)
     ) {
       const funcName = ctx.func_call().VAL_ID().text;
-
+      console.error(`Undeclared function "${funcName}"`);
       throw new Error(`Undeclared function "${funcName}"`);
     }
 
@@ -153,12 +151,7 @@ class QuadruplesListener implements fsListener {
       }
     } else if (isLiteral) {
       const literal = ctx.literal().text;
-      const literalType = getLiteralType(
-        isLiteral,
-        userTypes,
-        objectsStack.length > 0 ? objectsStack.top() : [],
-        typesStack.top()
-      );
+      const literalType = getLiteralType(isLiteral, typesStack.top());
       const isLiteralList = ctx.literal().list_literal();
       if (!isLiteralList && !constantTable.get(literal))
         constantTable.set(
@@ -169,22 +162,25 @@ class QuadruplesListener implements fsListener {
         const operand = String(constantTable.get(ctx.text) || isValID.text);
         operandsStack.push(operand);
         typesStack.push(literalType);
-        if (primitives.every((x) => x !== literalType)) objectsStack.pop();
       }
     }
 
+    // Remove parentheses from oprStack
     if (ctx.text[ctx.text.length - 1] === ")") {
       oprStack.pop();
     }
 
+    // If isFuncCall is true, add function call quadruple
     if (isFuncCall) {
       this.addFunctionCallQuadruples(ctx.func_call().VAL_ID().text);
       argPointer = 0;
     }
 
+    // If there is a pending not operator to apply, apply it
     if (oprStack.top() === "!") this.addNotQuadruple();
   }
 
+  // Insert + or - operation to oprStack
   enterUnaryOpr(ctx: UnaryOprContext) {
     const termState = ctx.parent.text;
 
@@ -193,6 +189,7 @@ class QuadruplesListener implements fsListener {
     }
   }
 
+  // Check if there is a pending + or - operation and apply it
   exitUnaryOpr(ctx: UnaryOprContext) {
     if (termOperators.some((x) => x === oprStack.top())) {
       this.addQuadruple();
@@ -275,12 +272,15 @@ class QuadruplesListener implements fsListener {
     }
   }
 
+  // Make sure the expression inside an If is Boolean.
+  // If expression is inside print, add print quadruple
   exitExpression(ctx: ExpressionContext) {
     // Check if if expression is of Boolean type
     if (ctx.parent instanceof If_expressionContext) {
       const type = typesStack.pop();
       operandsStack.pop();
       if (type !== "Boolean") {
+        console.error("Expression type must be Boolean");
         throw new Error("Expression type must be Boolean");
       }
     }
@@ -316,6 +316,9 @@ class QuadruplesListener implements fsListener {
     isNameValid(name, userTypes);
 
     if (scope.varsMap.has(name)) {
+      console.error(
+        `Variable "${name}" has already been declared in this scope.`
+      );
       throw new Error(
         `Variable "${name}" has already been declared in this scope.`
       );
@@ -361,6 +364,9 @@ class QuadruplesListener implements fsListener {
         : functionTable.get(scopeName).variables.get(variableName).type;
 
     if (expressionType !== type) {
+      console.error(
+        `Type mismatch in variable "${variableName}", expected "${type}" but got "${expressionType}"`
+      );
       throw new Error(
         `Type mismatch in variable "${variableName}", expected "${type}" but got "${expressionType}"`
       );
@@ -394,6 +400,9 @@ class QuadruplesListener implements fsListener {
     const scope = new Scope(funcName, "Function", currentScope.top());
 
     if (isFunctionDeclared(functionTable, funcName)) {
+      console.error(
+        `Function ${funcName} has already been declared in this scope.`
+      );
       throw new Error(
         `Function ${funcName} has already been declared in this scope.`
       );
@@ -441,7 +450,7 @@ class QuadruplesListener implements fsListener {
 
     // Check if the amount of arguments is correct
     if (func.args.length === 0) {
-      console.log("Too many arguments in function");
+      console.error("Too many arguments in function");
       throw new Error(`Too many arguments in function ${funcName} call.`);
     }
 
@@ -451,8 +460,11 @@ class QuadruplesListener implements fsListener {
 
     // Check if argument type is correct
     if (argType !== arg.type) {
+      console.error(
+        `Type mismatch in argument "${arg.name}", expected "${arg.type}" but got "${argType}"`
+      );
       throw new Error(
-        `Type Mismatch in argument "${arg.name}", expected "${arg.type}" but got "${argType}"`
+        `Type mismatch in argument "${arg.name}", expected "${arg.type}" but got "${argType}"`
       );
     }
 
@@ -481,21 +493,9 @@ class QuadruplesListener implements fsListener {
     const func = functionTable.get(funcName);
     const paramsNum = ctx.param().length;
     if (paramsNum < func.args.length) {
+      console.error(`Too few arguments in function ${funcName} call`);
       throw new Error(`Too few arguments in function ${funcName} call`);
     }
-  }
-
-  // Create new User Type and added to userTypes table
-  exitType_declaration(ctx: Type_declarationContext) {
-    const name = ctx.TYPE_ID().text;
-    const properties = extractObjectProperties(ctx);
-
-    isNameValid(name, userTypes);
-
-    userTypes.set(name, {
-      name,
-      properties: new Map(properties.map((x) => [x.name, x])),
-    });
   }
 
   enterIf_expression(ctx: If_expressionContext) {
@@ -566,6 +566,7 @@ class QuadruplesListener implements fsListener {
       // Check if the return type is correct
       const funcData = functionTable.get(scopeName);
       if (expressionType !== funcData.type) {
+        console.error("Incorrect return type in function");
         throw new Error("Incorrect return type in function");
       }
       funcData.returnVirtualAddress =
@@ -581,6 +582,7 @@ class QuadruplesListener implements fsListener {
     // Check if type used exists
     const name = ctx.text;
     if (!ctx.list_type() && !isTypeDeclared(name, userTypes)) {
+      console.error(`Type "${name}" is not declared`);
       throw new Error(`Type "${name}" is not declared`);
     }
 
@@ -592,105 +594,6 @@ class QuadruplesListener implements fsListener {
       functionTable.get(funcName).type = returnType;
     }
   }
-
-  // Insert variable to current object
-  // enterObject_attribute(ctx: Object_attributeContext) {
-  //   const variable = {
-  //     name: ctx.start.text,
-  //     type: null,
-  //     virtualAddress: -1,
-  //     nestedVariables: new Map(),
-  //   } as Variable;
-  //   objectsStack.top().push(variable);
-  // }
-
-  // exitObject_attribute(ctx: Object_attributeContext) {
-  //   const scopeType = currentScope.top().scopeType;
-  //   const currentObject = objectsStack.top();
-  //   const currentObjectAttribute = currentObject[currentObject.length - 1];
-  //   const type = typesStack.pop();
-  //   const value = operandsStack.pop();
-  //   currentObjectAttribute.type = type;
-  //   if (primitives.some((x) => x === type)) {
-  //     const virtualAddress = getVirtualAddress(
-  //       type,
-  //       scopeType,
-  //       virtualAddresses
-  //     );
-  //     quadruples.push(["=", value, "", String(virtualAddress)]);
-  //     currentObjectAttribute.virtualAddress = virtualAddress;
-  //   }
-  // }
-
-  // enterObject_literal(ctx: Object_literalContext) {
-  //   objectsStack.push([]);
-  // }
-
-  // exitObject_literal(ctx: Object_literalContext) {
-  //   const nestedVariables = objectsStack.top();
-  //   if (objectsStack.length === 1) {
-  //     const scope = currentScope.top();
-  //     const nestedVariablesMap = new Map(
-  //       nestedVariables.map((x) => [x.name, x])
-  //     );
-  //     scope.varsMap.get(currentVarName).nestedVariables = nestedVariablesMap;
-  //     if (scope.scopeType === "Global")
-  //       globalVariablesTable.get(
-  //         currentVarName
-  //       ).nestedVariables = nestedVariablesMap;
-  //     else
-  //       functionTable
-  //         .get(scope.scopeName)
-  //         .variables.get(currentVarName).nestedVariables = nestedVariablesMap;
-  //   } else {
-  //     const popped = objectsStack.pop();
-  //     const currentObject = objectsStack.top();
-  //     objectsStack.push(popped);
-  //     const currentObjectAttribute = currentObject[currentObject.length - 1];
-  //     currentObjectAttribute.nestedVariables = new Map(
-  //       nestedVariables.map((x) => [x.name, x])
-  //     );
-  //   }
-  // }
-
-  // exitObject_access(ctx: Object_accessContext) {
-  //   const variables = ctx.VAL_ID().map((x) => x.text);
-  //   const start = getVariable(currentScope.top(), variables.shift());
-  //   const f = (variable: Variable, nestedVariables: string[]): Variable => {
-  //     if (nestedVariables.length === 0) return variable;
-  //     const nestedVarName = nestedVariables.shift();
-  //     const nestedVariable = variable.nestedVariables.get(nestedVarName);
-  //     if (!nestedVariable)
-  //       throw new Error(
-  //         `Property "${variable.name}" does not have value "${nestedVarName}"`
-  //       );
-  //     return f(nestedVariable, nestedVariables);
-  //   };
-  //   const res = f(start, variables);
-  //   if (primitives.some((x) => x === res.type))
-  //     operandsStack.push(String(res.virtualAddress));
-  //   else operandsStack.push(res.name);
-  //   typesStack.push(res.type);
-  // }
-
-  // enterObject_access(ctx: Object_accessContext) {
-  //   const scope = currentScope.top();
-  //   const variable = scope.varsMap.get(ctx.start.text);
-  //   objectAccessStack.push(variable);
-  // }
-
-  // exitObject_access(ctx: Object_accessContext) {
-  //   const value = objectAccessStack.top();
-  //   const type = objectAccessTypeStack.top();
-  //   console.log(value, type);
-  // }
-
-  // enterNested_object_access(ctx: Nested_object_accessContext) {
-  //   const value = objectAccessStack.top();
-  //   const type = objectAccessTypeStack.top();
-  //   console.log(value, type);
-  //   value.nestedVariables.get(ctx.)
-  // }
 
   // When the executable part of the program is reached, update the initial
   // GOTO jump
@@ -715,6 +618,7 @@ class QuadruplesListener implements fsListener {
     );
 
     if (oprResult === "Error") {
+      console.error("Type Error in Expression");
       throw new Error("Type Error in Expression");
     }
 
@@ -736,6 +640,7 @@ class QuadruplesListener implements fsListener {
     typesStack.push(oprResult);
   }
 
+  // Add a not operator quadruple
   addNotQuadruple() {
     oprStack.pop();
     const operand = operandsStack.pop();
@@ -743,6 +648,7 @@ class QuadruplesListener implements fsListener {
     const scopeName = currentScope.top().scopeName;
 
     if (type !== "Boolean") {
+      console.error("Type Error in Expression");
       throw new Error("Type Error in Expression");
     }
 
@@ -757,6 +663,7 @@ class QuadruplesListener implements fsListener {
     typesStack.push("Boolean");
   }
 
+  // Add assignation quadruple
   addAssignationQuadruple(ctx: Val_declarationContext) {
     const operator = oprStack.pop();
     const operandOne = operandsStack.pop();
@@ -830,6 +737,9 @@ class QuadruplesListener implements fsListener {
 
     // Validating element type
     if (ownerList.type !== `[${type}]`) {
+      console.error(
+        `Type Error in List: ${ownerList.name}. Expected type: ${ownerList.type} and found type: ${type} inside list.`
+      );
       throw new Error(
         `Type Error in List: ${ownerList.name}. Expected type: ${ownerList.type} and found type: ${type} inside list.`
       );
@@ -943,6 +853,7 @@ class QuadruplesListener implements fsListener {
     // oprStack.push("=");
   }
 
+  // When finished parsing the code, start the Virtual Machine
   exitMain(ctx: MainContext) {
     console.time("Execution time");
     const vm = new VirtualMachine(

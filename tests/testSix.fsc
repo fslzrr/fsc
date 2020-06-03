@@ -6,18 +6,12 @@ type Car = {
 type Person = {
     name: String,
     lastName: String,
-    age: Int,
-    car: Car
+    age: Int
 }
 
 val person : Person = {
     name: "Jorge",
     lastName: "Iribe",
-    age: 21,
-    car: {
-        brand: "Tesla",
-        year: 2012
-    }
+    age: 21
 }
-val car : Car = person.car
-print(car.brand)
+print(person.name)

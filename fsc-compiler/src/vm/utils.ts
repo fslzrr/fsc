@@ -1,3 +1,4 @@
+// Given a virtual address, return its type
 export function getVariableTypeByAddress(address: number) {
   const initialAddresses = [5000, 10000, 15000, 20000];
   for (let i = 0; i < initialAddresses.length; i++) {
