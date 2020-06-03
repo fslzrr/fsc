@@ -125,17 +125,6 @@ class QuadruplesListener implements fsListener {
       }
     }
 
-    // Check if the function trying to call is declared
-    if (
-      ctx.func_call() &&
-      scopeName !== "Global" &&
-      !functionTable.has(scopeName)
-    ) {
-      const funcName = ctx.func_call().VAL_ID().text;
-      console.error(`Undeclared function "${funcName}"`);
-      throw new Error(`Undeclared function "${funcName}"`);
-    }
-
     const isLiteral = ctx.literal();
     const isFuncCall = ctx.func_call();
 
@@ -483,6 +472,12 @@ class QuadruplesListener implements fsListener {
 
   // Add ERA quadruple
   enterFunc_call(ctx: Func_callContext) {
+    // Check if the function trying to call is declared
+    if (!functionTable.has(ctx.start.text)) {
+      const funcName = ctx.start.text;
+      console.error(`Undeclared function "${funcName}"`);
+      throw new Error(`Undeclared function "${funcName}"`);
+    }
     const funcName = ctx.start.text;
     quadruples.push(["ERA", "", "", funcName]);
   }

@@ -34,7 +34,7 @@ head : HEAD OPEN_PAREN expression CLOSE_PAREN;
 tail : TAIL OPEN_PAREN expression CLOSE_PAREN;
 prelude : length | head | tail;
 
-binary_operators :  EQ | NOT_EQ | LOWER_THAN | GREATER_THAN | LOWER_THAN_OR_EQ | LOWER_THAN_OR_EQ;
+binary_operators :  EQ | NOT_EQ | LOWER_THAN | GREATER_THAN | LOWER_THAN_OR_EQ | GREATER_THAN_OR_EQ;
 relational_operators : AND | OR;
 
 factor : OPEN_PAREN expression CLOSE_PAREN | literal | func_call | VAL_ID | prelude;
