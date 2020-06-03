@@ -194,13 +194,12 @@ Functions will always have at least one argument and will always return somethin
 
 ```
     // Function Declaration
-    sum : Int -> Int -> Int
-    sum numOne numTwo = {
-        numOne + numTwo
+    sum(a: Int, b: Int) : Int -> {
+        a + b
     }
 
     // Function call
-    (sum 10 20)
+    sum(10, 20)
 ```
 
 ### Conditional Expression
@@ -208,21 +207,21 @@ Functions will always have at least one argument and will always return somethin
 The last line of the body is the return value of the function where it is used.
 
 ```
-    if [boolean-expression] ? {
+    if [boolean-expression] then {
         [body]
-    } : [boolean-expression] ? {
+    } else if [boolean-expression] then {
         [body]
-    } : {
+    } else {
         [body]
     }
 
     // Example
 
-    if a > b ? {
+    if a > b then {
         a + b
-    } : a == b ? {
+    } else if a == b then {
         a - b
-    } : {
+    } else {
         a * b
     }
 ```
@@ -271,33 +270,26 @@ The syntax of the language can be found in the syntax.ebnf file. It is expressed
 ### Code Sample
 
 ```
-mergeLists : [Int] -> [Int] -> [Int]
-mergeLists listOne listTwo = {
-    val listOneHead : Int = (head listOne)
-    val listTwoHead : Int = (head listTwo)
+val i1 : Int = 20
+val j : String = "Hello World"
 
-    if (length listOne) == 0 then {
-        listTwo
-    } else if (length listTwo) == 0 then {
-        listOne
-    } else if listOneHead < listTwoHead then {
-        val restOfListOne : [Int] = (tail listOne)
-        (concat [listOneHead] (mergeLists restOfListOne listTwo))
+fib(x: Int) : Int -> {
+    if x <= 0 then {
+        0
+    } else if x == 1 then {
+        1
     } else {
-        val restOfListTwo : [Int] = (tail listTwo)
-        (concat [listTwoHead] (mergeLists restOfListOne listTwo))
+        fib(x - 1) + fib(x - 2)
     }
 }
 
-val listOne : [Int] = [1, 3, 5, 7, 9]
-val listTwo : [Int] = [2, 4, 6, 8, 10]
+fact(n: Int) : Int -> {
+    if n <= 1 then {
+        1
+    } else {
+        n * fact(n - 1)
+    }
+}
 
-(print (mergeLists listOne listTwo))
-
-// Prints [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+print("Fib Answer", fib(i1))
 ```
-
-## Syntax Diagram
-
-Diagrams are in a separate PDF file.
-Watching this README file from our repository you'll be to navigate the file and downloadit from there. [Navitage To File](./syntax/syntaxDiagram/diagram.pdf)

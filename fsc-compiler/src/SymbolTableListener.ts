@@ -267,7 +267,7 @@ class QuadruplesListener implements fsListener {
     // Check if if expression is of Boolean type
     if (ctx.parent instanceof If_expressionContext) {
       const type = typesStack.pop();
-      operandsStack.pop();
+
       if (type !== "Boolean") {
         console.error("Expression type must be Boolean");
         throw new Error("Expression type must be Boolean");
@@ -438,7 +438,7 @@ class QuadruplesListener implements fsListener {
     const func = functionTable.get(funcName);
 
     // Check if the amount of arguments is correct
-    if (func.args.length === 0) {
+    if (argPointer >= func.args.length) {
       console.error("Too many arguments in function");
       throw new Error(`Too many arguments in function ${funcName} call.`);
     }
@@ -545,7 +545,7 @@ class QuadruplesListener implements fsListener {
 
     if (then && then.text === ReservedKeywords.THEN) {
       jumpsStack.push(quadruples.length);
-      quadruples.push(["GOTOF", quadruples[quadruples.length - 1][3], "", ""]);
+      quadruples.push(["GOTOF", operandsStack.pop(), "", ""]);
     }
   }
 
