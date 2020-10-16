@@ -1,5 +1,4 @@
 import ora from "ora";
-import { resolve } from "path";
 import yargs from "yargs";
 
 async function init() {
