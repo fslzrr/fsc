@@ -1,5 +1,6 @@
 import ora from "ora";
 import yargs from "yargs";
+import { error, success } from "./utils";
 
 async function init() {
   // TODO: define several arguments to add more optional configurations
@@ -10,7 +11,7 @@ async function init() {
   // TODO: valite file extension - support for modules?
   const [file] = args._;
   if (!file) {
-    console.error("You must provide a file.");
+    error("you must provide a file");
     process.exit(1);
   }
 
@@ -24,7 +25,7 @@ async function init() {
   await promise;
   spinner.stop();
 
-  console.log(`Successfully compiled!`);
+  success(`successfully compiled!`);
   process.exit(0);
 }
 
