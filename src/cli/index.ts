@@ -2,7 +2,7 @@ import ora from "ora";
 import yargs from "yargs";
 import { error, success } from "./utils";
 
-async function init() {
+async function cli() {
   // TODO: define several arguments to add more optional configurations
   const args = yargs.options({
     _: { type: "string", demandOption: true, alias: "f" },
@@ -29,4 +29,4 @@ async function init() {
   process.exit(0);
 }
 
-init();
+cli();
