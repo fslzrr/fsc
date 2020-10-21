@@ -7,7 +7,7 @@ Tbh pok pok cold-pressed biodiesel meggings DIY ramps, raclette la croix jean sh
 
 ## Documentation
 
-Raclette messenger bag unicorn vape, venmo man braid yuccie activated charcoal taxidermy. Four loko plaid listicle iPhone. Aesthetic farm-to-table roof party etsy. Activated charcoal microdosing selfies you probably haven't heard of them four loko ethical seitan hashtag hot chicken knausgaard.
+Currently we are defining the grammar for this programming language. If you want to look at the progress and what we've been you can look [here](docs/definition/grammar/README.md)
 
 ## Examples
 
