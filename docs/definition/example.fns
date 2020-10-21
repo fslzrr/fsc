@@ -3,7 +3,7 @@
 // v2.0.0
 const quickSort: (Int[]) => Int[] = (list) => {
     if length(list) == 0 {
-        return []
+        []
     } else {
         const pivot: Int = head(list)
         const smaller: Int[] = smallerThan(pivot, list, [])
