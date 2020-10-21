@@ -4,5 +4,5 @@ from tokens import Id
 
 def grammar():
     return Sequence(Terminal("{"),
-                    Terminal("<MapProps>"),
+                    Terminal("<DataProps>"),
                     Terminal("}"))

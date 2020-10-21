@@ -1,7 +1,7 @@
 import sys
 import os
 from railroad import Diagram
-from tokens import Boolean, Int, Float, String, List, Map, MapProps, MapProp, Lambda, TypedArgs, TypedArg
+from tokens import Boolean, Int, Float, String, List, Data, DataProps, DataProp, Lambda, TypedArgs, TypedArg
 
 grammars = [
     ('Boolean', Boolean.grammar()),
@@ -9,9 +9,9 @@ grammars = [
     ("Float", Float.grammar()),
     ("String", String.grammar()),
     ("List", List.grammar()),
-    ("Map", Map.grammar()),
-    ("MapProps", MapProps.grammar()),
-    ("MapProp", MapProp.grammar()),
+    ("Data", Data.grammar()),
+    ("DataProps", DataProps.grammar()),
+    ("DataProp", DataProp.grammar()),
     ("Lambda", Lambda.grammar()),
     ("TypedArgs", TypedArgs.grammar()),
     ("TypedArg", TypedArg.grammar())

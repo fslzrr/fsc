@@ -28,17 +28,17 @@ Some of this grammars don't have a diagram because fo it's simplicity (or it's u
 
 <img src="output/List.svg"/>
 
-#### Map
+#### Data
 
-<img src="output/Map.svg">
+<img src="output/Data.svg">
 
-##### MapProps
+##### DataProps
 
-<img src="output/MapProps.svg">
+<img src="output/DataProps.svg">
 
-##### MapProp
+##### DataProp
 
-<img src="output/MapProp.svg">
+<img src="output/DataProp.svg">
 
 #### Lambda
 
