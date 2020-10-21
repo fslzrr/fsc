@@ -1,2 +1,6 @@
+# general project
 dist/
 node_modules/
+
+# documentation
+__pycache__/
