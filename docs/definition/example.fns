@@ -1,0 +1,32 @@
+// this is a commet
+
+// v2.0.0
+const quickSort: (Int[]) => Int[] = (list) => {
+    if length(list) == 0 {
+        return []
+    } else {
+        const pivot: Int = head(list)
+        const smaller: Int[] = smallerThan(pivot, list, [])
+        const higher: Int[] = higherThan(pivot, list, [])
+        quickSort(smaller) ++ [pivot] ++ quickSort(higher)
+    }
+}
+
+const list: Int[] = [4, 6, 3, 2, 9]
+const sortedList: Int[] = quickSort(list)
+
+
+// Future - type inference
+const quickSort = (xs: Int[]) => {
+    if length(list) == 0 {
+        []
+    } else {
+        const pivot = head(list)
+        const smaller = smallerThan(pivot, list, [])
+        const higher = higherThan(pivot, list, [])
+        quickSort(smaller) ++ [pivot] ++ quickSort(higher)
+    }
+}
+
+const list = [4, 6, 3, 2, 9]
+const sortedList = quickSort(list)
