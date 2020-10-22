@@ -1,0 +1,43 @@
+<svg class="railroad-diagram" height="92" viewBox="0 0 423.0 92" width="423.0" xmlns="http://www.w3.org/2000/svg">
+<g transform="translate(.5 .5)">
+<style>/* <![CDATA[ */
+	svg.railroad-diagram {
+		background-color:hsl(30,20%,95%);
+	}
+	svg.railroad-diagram path {
+		stroke-width:3;
+		stroke:black;
+		fill:rgba(0,0,0,0);
+	}
+	svg.railroad-diagram text {
+		font:bold 14px monospace;
+		text-anchor:middle;
+	}
+	svg.railroad-diagram text.label{
+		text-anchor:start;
+	}
+	svg.railroad-diagram text.comment{
+		font:italic 12px monospace;
+	}
+	svg.railroad-diagram rect{
+		stroke-width:3;
+		stroke:black;
+		fill:hsl(120,100%,90%);
+	}
+	svg.railroad-diagram rect.group-box {
+		stroke: gray;
+		stroke-dasharray: 10 5;
+		fill: none;
+	}
+
+/* ]]> */
+</style><g>
+<path d="M20 51v20m10 -20v20m-10 -10h20"></path></g><path d="M40 61h10"></path><g>
+<path d="M50 61h0.0"></path><path d="M373.0 61h0.0"></path><g class="terminal ">
+<path d="M50.0 61h0.0"></path><path d="M155.0 61h0.0"></path><rect height="22" rx="10" ry="10" width="105.0" x="50.0" y="50"></rect><text x="102.5" y="65">&#60;UnaryOpr></text></g><path d="M155.0 61h10"></path><g>
+<path d="M165.0 61h0.0"></path><path d="M373.0 61h0.0"></path><path d="M165.0 61a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path><g class="terminal ">
+<path d="M185.0 31h48.5"></path><path d="M304.5 31h48.5"></path><rect height="22" rx="10" ry="10" width="71.0" x="233.5" y="20"></rect><text x="269.0" y="35">&#60;Expr></text></g><path d="M353.0 31a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path><path d="M165.0 61h20"></path><g>
+<path d="M185.0 61h0.0"></path><path d="M353.0 61h0.0"></path><g class="terminal ">
+<path d="M185.0 61h0.0"></path><path d="M213.5 61h0.0"></path><rect height="22" rx="10" ry="10" width="28.5" x="185.0" y="50"></rect><text x="199.25" y="65">(</text></g><path d="M213.5 61h10"></path><path d="M223.5 61h10"></path><g class="terminal ">
+<path d="M233.5 61h0.0"></path><path d="M304.5 61h0.0"></path><rect height="22" rx="10" ry="10" width="71.0" x="233.5" y="50"></rect><text x="269.0" y="65">&#60;Expr></text></g><path d="M304.5 61h10"></path><path d="M314.5 61h10"></path><g class="terminal ">
+<path d="M324.5 61h0.0"></path><path d="M353.0 61h0.0"></path><rect height="22" rx="10" ry="10" width="28.5" x="324.5" y="50"></rect><text x="338.75" y="65">)</text></g></g><path d="M353.0 61h20"></path></g></g><path d="M373.0 61h10"></path><path d="M 383.0 61 h 20 m -10 -10 v 20 m 10 -20 v 20"></path></g></svg>

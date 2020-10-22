@@ -1,6 +1,7 @@
 from railroad import Sequence, ZeroOrMore, Terminal
-from tokens import Char
 
 
 def grammar():
-    return Sequence(Terminal('"'), ZeroOrMore(Char.grammar()), Terminal('"'))
+    return Sequence(Terminal('"'),
+                    ZeroOrMore(Terminal("<Char>")),
+                    Terminal('"'))

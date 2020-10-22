@@ -1,9 +1,17 @@
+from railroad import Diagram
 import sys
 import os
-from railroad import Diagram
-from tokens import Boolean, Int, Float, String, List, Data, DataProps, DataProp, Lambda, TypedArgs, TypedArg
+from tokens import Expr, UnaryExpr, BinaryExpr, TernaryExpr, UnaryOpr, BinaryOpr
+from tokens import Literal, Boolean, Int, Float, String, List, Data, DataProps, DataProp, Lambda, Args
 
 grammars = [
+    ('Expr', Expr.grammar()),
+    ('UnaryExpr', UnaryExpr.grammar()),
+    ('BinaryExpr', BinaryExpr.grammar()),
+    ('TernaryExpr', TernaryExpr.grammar()),
+    ('UnaryOpr', UnaryOpr.grammar()),
+    ('BinaryOpr', BinaryOpr.grammar()),
+    ('Literal', Literal.grammar()),
     ('Boolean', Boolean.grammar()),
     ("Int", Int.grammar()),
     ("Float", Float.grammar()),
@@ -13,8 +21,7 @@ grammars = [
     ("DataProps", DataProps.grammar()),
     ("DataProp", DataProp.grammar()),
     ("Lambda", Lambda.grammar()),
-    ("TypedArgs", TypedArgs.grammar()),
-    ("TypedArg", TypedArg.grammar())
+    ("Args", Args.grammar()),
 ]
 
 scriptDir = os.path.dirname(__file__)

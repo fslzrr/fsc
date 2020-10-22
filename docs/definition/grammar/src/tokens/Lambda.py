@@ -3,7 +3,7 @@ from railroad import Sequence, Terminal
 
 def grammar():
     return Sequence(Terminal("("),
-                    Terminal("<TypedArgs>"),
+                    Terminal("<Args>"),
                     Terminal(")"),
                     Terminal("=>"),
-                    Terminal("<Expression>"))
+                    Terminal("<Expr>"))

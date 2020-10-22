@@ -1,6 +1,5 @@
-from railroad import Diagram, OneOrMore
-from tokens import Digit
+from railroad import OneOrMore, Terminal
 
 
 def grammar():
-    return OneOrMore(Digit.grammar())
+    return OneOrMore(Terminal("<Digit>"))

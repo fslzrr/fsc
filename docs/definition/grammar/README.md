@@ -1,53 +1,75 @@
 # Grammar Railfence Diagrams
 
-## Diagrams
-
 In this section the whole grammar of FnScript is displayed as railfence diagrams. Whenever you see a node with its text wrapped around `<` and `>` it means that is a reference to another grammar.
 
 Some of this grammars don't have a diagram because fo it's simplicity (or it's under development 🙊)
 
-### Literals
+## Expression
 
-#### Boolean
+<img src="output/Expr.svg"/>
+
+### UnaryExpr
+
+<img src="output/UnaryExpr.svg"/>
+
+### BinaryExpr
+
+<img src="output/BinaryExpr.svg"/>
+
+### TernaryExpr
+
+<img src="output/TernaryExpr.svg"/>
+
+## Operators
+
+### UnaryOpr
+
+<img src="output/UnaryOpr.svg"/>
+
+### BinaryOpr
+
+<img src="output/BinaryOpr.svg"/>
+
+## Literal
+
+<img src="output/Literal.svg"/>
+
+### Boolean
 
 <img src="output/Boolean.svg"/>
 
-#### Int
+### Int
 
 <img src="output/Int.svg"/>
 
-#### Float
+### Float
 
 <img src="output/Float.svg"/>
 
-#### String
+### String
 
 <img src="output/String.svg"/>
 
-#### List
+### List
 
 <img src="output/List.svg"/>
 
-#### Data
+### Data
 
 <img src="output/Data.svg">
 
-##### DataProps
+#### DataProps
 
 <img src="output/DataProps.svg">
 
-##### DataProp
+#### DataProp
 
 <img src="output/DataProp.svg">
 
-#### Lambda
+### Lambda
 
 <img src="output/Lambda.svg">
 
-##### TypedArgs
+#### Args
 
-<img src="output/TypedArgs.svg">
-
-##### TypedArg
-
-<img src="output/TypedArg.svg">
+<img src="output/Args.svg">
